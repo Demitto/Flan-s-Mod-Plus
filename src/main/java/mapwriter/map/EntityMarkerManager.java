@@ -4,11 +4,17 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.flansmod.common.driveables.DriveableType;
+import com.flansmod.common.driveables.EntityDriveable;
+import com.flansmod.common.driveables.EntitySeat;
 import com.flansmod.common.guns.EntityGrenade;
 
 import mapwriter.map.mapmode.MapMode;
+import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.init.Blocks;
+import net.minecraft.world.World;
 
 public class EntityMarkerManager
 {
@@ -64,7 +70,52 @@ public class EntityMarkerManager
 				}
 			}
 		}
-		
+
+		if( clientPlayer.ticksExisted % 10 == 0 &&
+			clientPlayer.ridingEntity instanceof EntitySeat &&
+			((EntitySeat) clientPlayer.ridingEntity).driveable != null)
+		{
+			DriveableType type = ((EntitySeat) clientPlayer.ridingEntity).driveable.getDriveableType();
+
+			if(type != null && type.radarDetectableAltitude >= 0)
+			{
+				List list = clientPlayer.worldObj.playerEntities;
+				for(int i=0; i < list.size(); i++)
+				{
+					EntityLivingBase player = (EntityLivingBase) list.get(i);
+					Entity entity = ((Entity)list.get(i)).ridingEntity;
+					if(entity == null)
+					{
+						continue;
+					}
+
+					if(entity instanceof EntitySeat && ((EntitySeat)entity).driveable != null)
+					{
+						type = ((EntitySeat)entity).driveable.getDriveableType();
+						if(type != null && type.stealth)
+						{
+							continue;
+						}
+					}
+
+					if(!player.isEntityEqual(clientPlayer) && !player.isOnSameTeam(clientPlayer))
+					{
+						Block block = searchBlockVertical(
+							entity.worldObj,
+							(int)(entity.posX + 0.5),
+							(int)(entity.posY + 0.5),
+							(int)(entity.posZ + 0.5),
+							type.radarDetectableAltitude);
+
+						if(Block.isEqualTo(block, Blocks.air))
+						{
+							put(clientPlayer, entity, 20 * 9);
+						}
+					}
+				}
+			}
+		}
+
 		Iterator<EntityMarker> iterator = this.markerList.iterator();
 		while(iterator.hasNext())
 		{
@@ -83,6 +134,32 @@ public class EntityMarkerManager
 				iterator.remove();
 			}
 		}
+	}
+
+	public static Block searchBlockVertical(World world, int px, int py, int pz, int lenY)
+	{
+		if(lenY == 0)	return Blocks.air;
+
+		for(int y = 0; y < lenY; y++, py--)
+		{
+			if(py < 0)
+			{
+				return Blocks.air;
+			}
+
+			if(py > 255)
+			{
+				continue;
+			}
+
+			Block block = world.getBlock(px, py, pz);
+			if(block != null && block != Blocks.air)
+			{
+				return block;
+			}
+		}
+
+		return Blocks.air;
 	}
 
 	public void drawMarkers(MapMode mapMode, MapView mapView)
