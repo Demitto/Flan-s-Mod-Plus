@@ -132,7 +132,7 @@ public class FlansMod
 	public static final int numPlayerSnapshots = 20;
 
 
-	public static float armourSpawnRate = 0.25F;
+	public static int armourSpawnRate = 20;
 
 	/** The spectator team. Moved here to avoid a concurrent modification error */
 	public static Team spectators = new Team("spectators", "Spectators", 0x404040, '7');
@@ -344,9 +344,9 @@ public class FlansMod
 	@SubscribeEvent
 	public void onLivingSpecialSpawn(LivingSpawnEvent.CheckSpawn event)
 	{
-		double chance = event.world.rand.nextDouble();
+		int chance = event.world.rand.nextInt(101);
 
-		if(chance < armourSpawnRate && event.entityLiving instanceof EntityZombie || event.entityLiving instanceof EntitySkeleton)
+		if(chance < armourSpawnRate && (event.entityLiving instanceof EntityZombie || event.entityLiving instanceof EntitySkeleton))
 		{
 			if(event.world.rand.nextBoolean() && ArmourType.armours.size() > 0)
 			{
@@ -563,11 +563,13 @@ public class FlansMod
         //teamsConfigString = configFile.getString("Config String", Configuration.CATEGORY_GENERAL, teamsConfigString, "A String!");
         //teamsConfigBoolean = configFile.getBoolean("Config Boolean", Configuration.CATEGORY_GENERAL, teamsConfigBoolean, "A Boolean!");
 
+        armourSpawnRate = configFile.getInt("ArmourSpawnRate",	Configuration.CATEGORY_GENERAL,  20, 0, 100, "The rate of Zombie or Skeleton to spawn equipped with armor. [0=0%, 100=100%]");
+
         noticeSpawnKillTime = configFile.getInt("NoticeSpawnKillTime",	Configuration.CATEGORY_GENERAL,  10, 0, 600, "Min(default=10)");
 
         TeamsManager.bulletSnapshotMin		= configFile.getInt("BltSS_Min",	Configuration.CATEGORY_GENERAL,  0, 0, 1000, "Min(default=0)");
         TeamsManager.bulletSnapshotDivisor	= configFile.getInt("BltSS_Divisor",Configuration.CATEGORY_GENERAL, 50, 0, 1000, "Divisor(default=50)");
-        
+
         for(int i=0; i<hitCrossHairColor.length; i++)
         {
         	final String[] COLOR = new String[]{ "Alpha", "Red", "Green", "Blue" };
@@ -590,7 +592,7 @@ public class FlansMod
     	{
     		category.get("BltSS_Divisor").set(divisor);
     	}
-    	
+
         TeamsManager.bulletSnapshotMin = min;
         TeamsManager.bulletSnapshotDivisor	= divisor;
         configFile.save();
