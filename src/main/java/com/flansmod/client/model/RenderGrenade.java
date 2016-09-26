@@ -24,6 +24,12 @@ public class RenderGrenade extends Render implements IItemRenderer
 
 	public void render(EntityGrenade grenade, double d, double d1, double d2, float f, float f1)
 	{
+		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
+		GL11.glEnable(GL11.GL_BLEND);
+		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
+		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+
 		bindEntityTexture(grenade);
         GL11.glPushMatrix();
         GL11.glTranslatef((float)d, (float)d1, (float)d2);
@@ -52,6 +58,9 @@ public class RenderGrenade extends Render implements IItemRenderer
 		if(model != null)
 			model.render(grenade, 0.0F, 0.0F, -0.1F, 0.0F, 0.0F, 0.0625F);
 		GL11.glPopMatrix();
+
+		GL11.glBlendFunc(srcBlend, dstBlend);
+		GL11.glDisable(GL11.GL_BLEND);
 	}
 
 	@Override
@@ -89,6 +98,12 @@ public class RenderGrenade extends Render implements IItemRenderer
 	@Override
 	public void renderItem(ItemRenderType type, ItemStack item, Object... data) 
 	{
+		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
+		GL11.glEnable(GL11.GL_BLEND);
+		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
+		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+
 		GL11.glPushMatrix();
 		if(item != null && item.getItem() instanceof ItemGrenade)
 		{
@@ -122,6 +137,9 @@ public class RenderGrenade extends Render implements IItemRenderer
 			}
 		}
 		GL11.glPopMatrix();
+
+		GL11.glBlendFunc(srcBlend, dstBlend);
+		GL11.glDisable(GL11.GL_BLEND);
 	}
 
 }
