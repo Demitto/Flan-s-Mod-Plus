@@ -128,6 +128,12 @@ public class RenderGun implements IItemRenderer
 		
 		int flip = offHand ? -1 : 1;
 		
+		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
+		GL11.glEnable(GL11.GL_BLEND);
+		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
+		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+
 		GL11.glPushMatrix();
 		{
 			//Get the reload animation rotation
@@ -176,6 +182,9 @@ public class RenderGun implements IItemRenderer
 					if(FlansModClient.zoomProgress > 0.9F && scope.hasZoomOverlay())
 					{
 						GL11.glPopMatrix();
+
+						GL11.glBlendFunc(srcBlend, dstBlend);
+						GL11.glDisable(GL11.GL_BLEND);
 						return;
 					}
 					float adsSwitch = FlansModClient.lastZoomProgress + (FlansModClient.zoomProgress - FlansModClient.lastZoomProgress) * smoothing;//0F;//((float)Math.sin((FlansMod.ticker) / 10F) + 1F) / 2F;
@@ -315,6 +324,9 @@ public class RenderGun implements IItemRenderer
 			renderGun(item, gunType, f, model, animations, reloadRotate);
 		}
 		GL11.glPopMatrix();
+
+		GL11.glBlendFunc(srcBlend, dstBlend);
+		GL11.glDisable(GL11.GL_BLEND);
 	}
 	
 	/** Gun render method, seperated from transforms so that mecha renderer may also call this */

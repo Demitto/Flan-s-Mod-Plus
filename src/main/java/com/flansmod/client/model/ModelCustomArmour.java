@@ -28,6 +28,12 @@ public class ModelCustomArmour extends ModelBiped
 
 	public void render(Entity entity, float f, float f1, float f2, float f3, float f4, float f5)
 	{ 
+		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
+		GL11.glEnable(GL11.GL_BLEND);
+		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
+		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+
 		GL11.glPushMatrix();
 		GL11.glScalef(type.modelScale, type.modelScale, type.modelScale);
 		isSneak = entity.isSneaking();
@@ -81,6 +87,9 @@ public class ModelCustomArmour extends ModelBiped
 			}
 		}
 		GL11.glPopMatrix();
+
+		GL11.glBlendFunc(srcBlend, dstBlend);
+		GL11.glDisable(GL11.GL_BLEND);
 	} 
 	
 	public void render(ModelRendererTurbo[] models, ModelRenderer bodyPart, float f5, float scale)
