@@ -29,6 +29,11 @@ public class PacketDriveableControl extends PacketBase
 	public float rotorAngle;
 	public float prevRotorAngle;
 	public boolean flare;
+	public boolean canFire;
+	public boolean reload;
+	public int stage;
+	public int stageDelay;
+
 
 	
 	public PacketDriveableControl() {}
@@ -67,6 +72,10 @@ public class PacketDriveableControl extends PacketBase
 		prevPropAngle = driveable.prevPropAngle;
 		rotorAngle = driveable.rotorAngle;
 		prevRotorAngle = driveable.prevRotorAngle;
+		stage = driveable.stage;
+		stageDelay = driveable.reloadAnimTime;
+		canFire = driveable.canFireIT1;
+		reload = driveable.reloadingDrakon;
 	}
 		
 	@Override
@@ -95,6 +104,10 @@ public class PacketDriveableControl extends PacketBase
     	data.writeFloat(rotorAngle);
     	data.writeFloat(prevRotorAngle); 
     	data.writeBoolean(flare);
+    	data.writeInt(stage);
+    	data.writeInt(stageDelay);
+    	data.writeBoolean(canFire);
+    	data.writeBoolean(reload);
 	}
 
 	@Override
@@ -123,6 +136,10 @@ public class PacketDriveableControl extends PacketBase
 		rotorAngle = data.readFloat();
 		prevRotorAngle = data.readFloat();
 		flare = data.readBoolean();
+		stage = data.readInt();
+		stageDelay = data.readInt();
+		canFire = data.readBoolean();
+		reload = data.readBoolean();
 	}
 
 	@Override
@@ -154,6 +171,11 @@ public class PacketDriveableControl extends PacketBase
 		driveable.rotorAngle = rotorAngle;
 		driveable.prevRotorAngle = prevRotorAngle;
 		driveable.varFlare= flare;
+		if(driveable.getDriveableType().IT1)
+		{
+			driveable.setIT1(canFire, reload, stage, stageDelay);
+		}
+
 	}
 
 	@Override
