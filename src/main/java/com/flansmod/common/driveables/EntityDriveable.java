@@ -547,6 +547,18 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	        serverPitch = f1;
 		}
     }
+    
+    
+    	public void setIT1(boolean canFire, boolean reloading, int stag, int stageTime)
+	{	
+		if(worldObj.isRemote && ticksExisted % 5 == 0)
+		{
+			canFireIT1 = canFire;
+			reloadingDrakon = reloading;
+			stage = stag;
+			reloadAnimTime = stageTime;
+		}
+	}
 
 	public void setPositionRotationAndMotion(double x, double y, double z, float yaw, float pitch, float roll, double motX, double motY, double motZ, float velYaw, float velPitch, float velRoll, float throt, float steeringYaw)
 	{
@@ -2708,6 +2720,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	{
 		DriveableType type = getDriveableType();
 		
+		
 		if(stage == 1)
 		{
 			//canFireIT1 = false;
@@ -2790,12 +2803,10 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		{
 	        drakonDoorAngle = moveToTarget(drakonDoorAngle, 0, 10);
 	        drakonArmAngle = moveToTarget(drakonArmAngle, 0, 3);
+	        if(worldObj.isRemote && this.ticksExisted > 2)
 			drakonRailAngle = moveToTarget(drakonRailAngle,-seats[0].looking.getPitch(), seats[0].seatInfo.aimingSpeed.y);
         	//reloadAnimTime = 60;
 		}
-		
-		FlansMod.getPacketHandler().sendToServer(new PacketIT1Reload(this));
-
 	}
 	
 	public float moveToTarget(float current, float target, float speed)
