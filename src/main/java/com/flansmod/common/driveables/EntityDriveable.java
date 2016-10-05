@@ -174,6 +174,25 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	public boolean varFlare;
 	
 	
+	//IT1 stuff
+	public float drakonDoorAngle = 0;
+	public float drakonArmAngle = 0;
+	public float drakonRailAngle = 0;
+	
+	public float prevDrakonDoorAngle = 0;
+	public float prevDrakonArmAngle = 0;
+	public float prevDrakonRailAngle = 0;
+	
+	public boolean reloadingDrakon = false;
+	public boolean canFireIT1 = true;
+	
+	public int stage = 0;
+	public int reloadAnimTime = 0;
+	
+	public boolean toDeactivate = false;
+	public int timeTillDeactivate = 0;
+	
+	
 	@SideOnly(Side.CLIENT)
 	public EntityLivingBase camera;
 
@@ -614,6 +633,9 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		DriveableType type = getDriveableType();
 		if(seats[0] == null && !(seats[0].riddenByEntity instanceof EntityLivingBase))
 			return;
+					
+		if(type.IT1 && !canFireIT1) return;
+			
 		//Check shoot delay
 		if(getShootDelay(secondary) <= 0)
 		{
@@ -1039,7 +1061,24 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		else onDeck = false;
 
         
-		//Aesthetics
+		//IT-1 Aesthetics
+		if(type.IT1)
+		{
+		    prevDrakonDoorAngle = drakonDoorAngle;
+		    prevDrakonArmAngle = drakonArmAngle;
+		    prevDrakonRailAngle = drakonRailAngle;
+		    if(canFireIT1) reloadingDrakon = false;
+			if(stage == 0) stage = 1;
+
+			if(stage == 8 && leftMouseHeld){stage = 1; timeTillDeactivate = 5; toDeactivate = true;}
+			if(timeTillDeactivate <= 0 && toDeactivate) {canFireIT1 = false; toDeactivate = false;}
+
+			if(reloadAnimTime <= 0)
+			IT1Reload();
+
+			reloadAnimTime--;
+			timeTillDeactivate--;
+		}
 		
 		//Aesthetics
 		prevPropAngle = propAngle;
@@ -2663,6 +2702,149 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		locked = true;
 		player.addChatMessage(new ChatComponentText("Locked"));
 		}
+	}
+	
+	public void IT1Reload()
+	{
+		DriveableType type = getDriveableType();
+		
+		if(stage == 1)
+		{
+			//canFireIT1 = false;
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, 0, 5);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 0, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 5);
+	        
+	        if(drakonRailAngle == -10) stage++;
+		}
+		
+		
+		if(stage == 2)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, -90, 5);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 0, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 1);
+	        
+	        if(drakonDoorAngle == -90) stage++;
+		}
+		
+		if(stage == 3)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, -90, 5);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 179, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 1);
+	        
+	        if(drakonArmAngle == 179) stage++;
+		}
+		
+		if(stage == 4)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, 0, 10);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 180, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 1);
+	        
+	        if(drakonDoorAngle == 0)
+	        {
+	        	if(IT1Loaded())
+	        	{
+		        	stage++;
+		        	reloadAnimTime = 60;
+	        	}
+	        }
+		}
+		
+		if(stage == 5)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, -90, 10);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 180, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 1);
+	        reloadingDrakon = true;
+	        
+	        if(drakonDoorAngle == -90) stage++;
+		}
+		
+		if(stage == 6)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, -90, 5);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 0, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 1);
+	        
+	        if(drakonArmAngle == 00) stage++;
+		}
+		
+		if(stage == 7)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, 0, 10);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 0, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, 0, 1);
+	        
+	        if(drakonRailAngle == 0 && drakonDoorAngle == 0)
+	        {
+	        	stage++;
+				canFireIT1 = true;
+				reloadingDrakon = false;
+	        }
+		}
+		
+		if(stage == 8)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, 0, 10);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 0, 3);
+			drakonRailAngle = moveToTarget(drakonRailAngle,-seats[0].looking.getPitch(), seats[0].seatInfo.aimingSpeed.y);
+        	//reloadAnimTime = 60;
+		}
+		
+		FlansMod.getPacketHandler().sendToServer(new PacketIT1Reload(this));
+
+	}
+	
+	public float moveToTarget(float current, float target, float speed)
+	{	
+		
+		float pitchToMove = (float)((Math.sqrt(target*target)) - Math.sqrt((current*current)));
+		for(; pitchToMove > 180F; pitchToMove -= 360F) {}
+		for(; pitchToMove <= -180F; pitchToMove += 360F) {}
+		
+		float signDeltaY = 0;
+		if(pitchToMove > speed){
+			signDeltaY = 1;
+		} else if(pitchToMove < -speed){
+			signDeltaY = -1;
+		} else {
+			signDeltaY = 0;
+			return target;
+		}
+		
+		
+		if(current > target)
+		{
+			current = current - speed;
+		}
+		
+		else if(current < target)
+		{
+			current = current + speed;
+		}
+		
+		
+		
+		return current;
+	}
+	
+	public boolean IT1Loaded()
+	{
+		DriveableType type = getDriveableType();
+		boolean loaded = false;
+		for(int i = driveableData.getMissileInventoryStart(); i < driveableData.getMissileInventoryStart() + type.numMissileSlots; i++)
+		{
+			ItemStack shell = driveableData.getStackInSlot(i);
+			if(shell != null && shell.getItem() instanceof ItemBullet && type.isValidAmmo(((ItemBullet)shell.getItem()).type, EnumWeaponType.MISSILE))
+			{
+				loaded = true;
+			}
+		}
+		
+		return loaded;
 	}
 	
 	public void tryRecoil()
