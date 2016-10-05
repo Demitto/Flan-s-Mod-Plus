@@ -589,6 +589,9 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 			} else {
 				wheel.moveEntity(0F, (!onDeck)?-0.98F:0, 0F);	
 			}
+			
+			if((throttle >= 0.2 || throttle <= -0.2) && wheel.getSpeedXYZ() <= getAvgWheelSpeedXYZ()/4) throttle = 0;
+
 		}
 		
 		if(wheels[0] != null && wheels[1] != null && wheels[2] != null && wheels[3] != null)
@@ -1004,6 +1007,13 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 	@Override
 	protected void dropItemsOnPartDeath(Vector3f midpoint, DriveablePart part)
 	{
+	}
+	
+	public float getAvgWheelSpeedXYZ()
+	{
+		float speed = (float)(wheels[0].getSpeedXYZ() + wheels[1].getSpeedXYZ() + wheels[2].getSpeedXYZ() + wheels[3].getSpeedXYZ())/4;
+		
+		return speed;
 	}
 
 	@Override
