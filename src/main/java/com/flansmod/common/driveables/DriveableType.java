@@ -218,6 +218,9 @@ public class DriveableType extends InfoType
     /** backwards compatibility attempt */
     public float gunLength = 0;
     
+    /** activator boolean for IT-1 reloads */
+    public boolean IT1 = false;
+    
     
     public boolean setPlayerInvisible = false;
 	
@@ -556,8 +559,11 @@ public class DriveableType extends InfoType
 						Float.valueOf(split[4])));
 			
 			
-            if(split[0].equals("SetPlayerInvisible"))
-            	setPlayerInvisible = Boolean.parseBoolean(split[1].toLowerCase());
+			if(split[0].equals("SetPlayerInvisible"))
+				setPlayerInvisible = Boolean.parseBoolean(split[1].toLowerCase());
+		
+			if(split[0].equals("IT1"))
+            			IT1 = Boolean.parseBoolean(split[1].toLowerCase());
 
 			//Backwards compatibility stuff
 			else if(split[0].equals("AddGun"))

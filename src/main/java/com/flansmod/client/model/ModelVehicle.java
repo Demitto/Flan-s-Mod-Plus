@@ -61,6 +61,17 @@ public class ModelVehicle extends ModelDriveable
 	public ModelRendererTurbo doorAnimModel[] = new ModelRendererTurbo[0];
 	public Vector3f doorAttach = new Vector3f();
 
+	//IT-1
+	public ModelRendererTurbo drakonModel[] = new ModelRendererTurbo[0];
+	public ModelRendererTurbo drakonReloadModel[] = new ModelRendererTurbo[0];
+	
+	public ModelRendererTurbo drakonArmModel[] = new ModelRendererTurbo[0];
+	public ModelRendererTurbo drakonRailModel[] = new ModelRendererTurbo[0];
+	public ModelRendererTurbo drakonDoorModel[] = new ModelRendererTurbo[0];
+
+	public Vector3f drakonArmAttach = new Vector3f(0,0,0);
+	public Vector3f drakonRailAttach = new Vector3f(0,0,0);
+	public Vector3f drakonDoorAttach = new Vector3f(0,0,0);
 	
 	public float animFrameLeft = 0;
 	public float animFrameRight = 0;
@@ -113,6 +124,19 @@ public class ModelVehicle extends ModelDriveable
 		GL11.glTranslatef(doorAttach.x, doorAttach.y, -doorAttach.z);
 		renderPart(doorAnimModel);
 		GL11.glPopMatrix();	
+		GL11.glPushMatrix();
+		GL11.glTranslatef(drakonArmAttach.x, drakonArmAttach.y, drakonArmAttach.z);
+		renderPart(drakonArmModel);
+		GL11.glPopMatrix();
+		GL11.glPushMatrix();
+		GL11.glTranslatef(drakonRailAttach.x, drakonRailAttach.y, drakonRailAttach.z);
+		renderPart(drakonRailModel);
+		renderPart(drakonModel);
+		GL11.glPopMatrix();
+		GL11.glPushMatrix();
+		GL11.glTranslatef(drakonDoorAttach.x, drakonDoorAttach.y, drakonDoorAttach.z);
+		renderPart(drakonDoorModel);
+		GL11.glPopMatrix();
 	}
 	
     public void render(float f5, EntityVehicle vehicle, float f)
@@ -358,6 +382,65 @@ public class ModelVehicle extends ModelDriveable
 					}
 				}
 			}
+			
+						//Render Drakon models
+			float armAngle = vehicle.drakonArmAngle;
+			float dArmAngle = (vehicle.drakonArmAngle - vehicle.prevDrakonArmAngle);
+	        for(; dArmAngle > 180F; dArmAngle -= 360F) {}
+	        for(; dArmAngle <= -180F; dArmAngle += 360F) {}
+    		float drakonArmAngle = vehicle.prevDrakonArmAngle + dArmAngle * dt;
+    		
+			float railAngle = vehicle.drakonRailAngle;
+			float dRailAngle = (vehicle.drakonRailAngle - vehicle.prevDrakonRailAngle);
+	        for(; dRailAngle > 180F; dRailAngle -= 360F) {}
+	        for(; dRailAngle <= -180F; dRailAngle += 360F) {}
+    		float drakonRailAngle = vehicle.prevDrakonRailAngle + dRailAngle * dt;
+
+			float doorAngle = vehicle.drakonDoorAngle;
+			float dDoorAngle = (vehicle.drakonDoorAngle - vehicle.prevDrakonDoorAngle);
+	        for(; dDoorAngle > 180F; dDoorAngle -= 360F) {}
+	        for(; dDoorAngle <= -180F; dDoorAngle += 360F) {}
+    		float drakonDoorAngle = vehicle.prevDrakonDoorAngle + dDoorAngle * dt;
+			
+			
+			GL11.glPushMatrix();
+			GL11.glTranslatef(drakonArmAttach.x, drakonArmAttach.y, drakonArmAttach.z);
+			GL11.glRotatef(drakonArmAngle, 0F, 0F, 1F);
+			for (ModelRendererTurbo aArmModel : drakonArmModel) {
+				aArmModel.render(f5, oldRotateOrder);
+			}
+			
+			GL11.glTranslatef(drakonRailAttach.x - drakonArmAttach.x, drakonRailAttach.y - drakonArmAttach.y, drakonRailAttach.z - drakonArmAttach.z);
+			GL11.glRotatef(drakonRailAngle, 0F, 0F, 1F);
+			for (ModelRendererTurbo aRailModel : drakonRailModel) {
+				aRailModel.render(f5, oldRotateOrder);
+			}
+			if(vehicle.canFireIT1)
+				{
+				for (ModelRendererTurbo aMissileModel : drakonModel) {
+					aMissileModel.render(f5, oldRotateOrder);
+				}
+			}
+			
+			if(vehicle.reloadingDrakon && !vehicle.canFireIT1)
+			{
+				for (ModelRendererTurbo aMissileModel : drakonReloadModel) {
+					aMissileModel.render(f5, oldRotateOrder);
+				}
+			}
+			
+			GL11.glPopMatrix();
+			
+			GL11.glPushMatrix();
+			
+			GL11.glTranslatef(drakonDoorAttach.x, drakonDoorAttach.y, drakonDoorAttach.z);
+			GL11.glRotatef(drakonDoorAngle, 1F, 0F, 0F);
+			for (ModelRendererTurbo aDoorModel : drakonDoorModel) {
+				aDoorModel.render(f5, oldRotateOrder);
+			}
+			
+			GL11.glPopMatrix();
+
 		}
 		
         //Render turret guns
@@ -457,6 +540,11 @@ public class ModelVehicle extends ModelDriveable
 		for(ModelRendererTurbo[] ratm : rightAnimTrackModel)
 			flip(ratm);
 		flip(doorAnimModel);
+		flip(drakonArmModel);
+		flip(drakonRailModel);
+		flip(drakonDoorModel);
+		flip(drakonModel);
+		flip(drakonReloadModel);
 	}	
 	
 	@Override
@@ -493,5 +581,10 @@ public class ModelVehicle extends ModelDriveable
 		for(ModelRendererTurbo[] ratm : rightAnimTrackModel)
 			translate(ratm, x, y, z);
 		translate(doorAnimModel, x,y,z);
+		translate(drakonArmModel, x, y, z);
+		translate(drakonRailModel, x, y, z);
+		translate(drakonDoorModel, x, y, z);
+		translate(drakonReloadModel, x, y, z);
+		translate(drakonModel, x, y, z);
 	}
 }
