@@ -1136,9 +1136,12 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 					for (Object obj : worldObj.loadedEntityList)
 					{
 						Entity entity = (Entity) obj;
+						String etype = entity.getEntityData().getString("EntityType");
 						if( (type.lockOnToMechas   && entity instanceof EntityMecha)   ||
 							(type.lockOnToVehicles && entity instanceof EntityVehicle) ||
+							(type.lockOnToVehicles && etype.equals("Vehicle"))		   || // for vehicle of other Mod
 							(type.lockOnToPlanes   && entity instanceof EntityPlane)   ||
+							(type.lockOnToPlanes   && etype.equals("Plane"))		   || // for plane of other Mod
 							(type.lockOnToPlayers  && entity instanceof EntityPlayer)  ||
 							(type.lockOnToLivings  && entity instanceof EntityLivingBase))
 						{
