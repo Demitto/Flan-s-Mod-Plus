@@ -31,6 +31,7 @@ import com.flansmod.common.guns.InventoryHelper;
 import com.flansmod.common.guns.raytracing.BulletHit;
 import com.flansmod.common.network.PacketDriveableKey;
 import com.flansmod.common.network.PacketDriveableKeyHeld;
+import com.flansmod.common.network.PacketIT1Reload;
 import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketPlaySound;
 import com.flansmod.common.network.PacketVehicleControl;
@@ -86,6 +87,7 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 	public boolean turretPitching;
 	
 	public boolean deployedSmoke = false;
+	
 
     public EntityVehicle(World world)
     {
@@ -412,6 +414,9 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 			soundPosition--;	
 		if(idlePosition > 0)
 			idlePosition--;	
+				
+		if(type.tank && !hasBothTracks()) throttle = 0;
+		if(disabled) wheelsYaw = 0;
 		
 		
 		//Rotate the wheels
@@ -591,7 +596,6 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 			}
 			
 			if((throttle >= 0.2 || throttle <= -0.2) && wheel.getSpeedXYZ() <= getAvgWheelSpeedXYZ()/4) throttle = 0;
-
 		}
 		
 		if(wheels[0] != null && wheels[1] != null && wheels[2] != null && wheels[3] != null)
@@ -705,12 +709,17 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 			serverPosY = posY;
 			serverPosZ = posZ;
 			serverYaw = axes.getYaw();
+			//if(type.IT1)
+			//FlansMod.getPacketHandler().sendToServer(new PacketIT1Reload(this));
 		}
 
 		//If this is the server, send position updates to everyone, having received them from the driver
 		if(!worldObj.isRemote && ticksExisted % 5 == 0)
 		{
 			FlansMod.getPacketHandler().sendToAllAround(new PacketVehicleControl(this), posX, posY, posZ, FlansMod.driveableUpdateRange, dimension);
+			//if(type.IT1)
+			//FlansMod.getPacketHandler().sendToAllAround(new PacketIT1Reload(this), posX, posY, posZ, FlansMod.driveableUpdateRange, dimension);
+
 		}
 
 		int animSpeed = 4;
@@ -999,6 +1008,13 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 		return axes.getRoll();
 	}
 	
+	public float getAvgWheelSpeedXYZ()
+	{
+		float speed = (float)(wheels[0].getSpeedXYZ() + wheels[1].getSpeedXYZ() + wheels[2].getSpeedXYZ() + wheels[3].getSpeedXYZ())/4;
+		
+		return speed;
+	}
+	
 	public void Recoil()
 	{
 		
@@ -1007,13 +1023,6 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 	@Override
 	protected void dropItemsOnPartDeath(Vector3f midpoint, DriveablePart part)
 	{
-	}
-	
-	public float getAvgWheelSpeedXYZ()
-	{
-		float speed = (float)(wheels[0].getSpeedXYZ() + wheels[1].getSpeedXYZ() + wheels[2].getSpeedXYZ() + wheels[3].getSpeedXYZ())/4;
-		
-		return speed;
 	}
 
 	@Override
@@ -1039,6 +1048,22 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 	public EntityLivingBase getCamera()
 	{
 		return null;
+	}
+	
+	public boolean hasBothTracks()
+	{
+		boolean tracks = true;
+		if(!isPartIntact(EnumDriveablePart.leftTrack))
+		{
+			tracks = false;
+		}
+		
+		if(!isPartIntact(EnumDriveablePart.rightTrack))
+		{
+			tracks = false;
+		}
+
+		return tracks;
 	}
 
 	@Override

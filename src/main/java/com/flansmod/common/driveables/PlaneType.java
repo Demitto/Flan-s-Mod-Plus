@@ -83,6 +83,8 @@ public class PlaneType extends DriveableType
     /** Default pitch for when parked. Will implement better system soon */
     public float restingPitch = 0F;
     
+    public boolean spinWithoutTail = false;
+    
     /** Whether the player can access the inventory while in the air */
     public boolean invInflight = true;
 
@@ -205,6 +207,8 @@ public class PlaneType extends DriveableType
                 flyWithOpenDoor = split[1].equals("True");
             if(split[0].equals("RestingPitch"))
                 restingPitch = Float.parseFloat(split[1]);
+            if(split[0].equals("SpinWithoutTail"))
+                spinWithoutTail = Boolean.parseBoolean(split[1]);
             
             //Animations
             //Wings

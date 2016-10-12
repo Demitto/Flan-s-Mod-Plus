@@ -223,6 +223,9 @@ public class DriveableType extends InfoType
     
     
     public boolean setPlayerInvisible = false;
+    
+    public float maxThrottleInWater = 0.5F;
+    public int maxDepth = 3;
 	
 	public static ArrayList<DriveableType> types = new ArrayList<DriveableType>();
 	
@@ -301,6 +304,10 @@ public class DriveableType extends InfoType
 				maxThrottle = Float.parseFloat(split[1]);
 			else if(split[0].equals("MaxNegativeThrottle"))
 				maxNegativeThrottle = Float.parseFloat(split[1]);
+			else if(split[0].equals("MaxThrottleInWater"))
+				maxThrottleInWater = Float.parseFloat(split[1]);
+			else if(split[0].equals("MaxDepth"))
+				maxDepth = Integer.parseInt(split[1]);
 			else if(split[0].equals("Drag"))
 				drag = Float.parseFloat(split[1]);
 			else if(split[0].equals("TurretOrigin"))
