@@ -505,6 +505,8 @@ public class EntityPlane extends EntityDriveable
 			varDoor = false;
 			doorsHaveShut = false;
 		}
+		
+		if(!isPartIntact(EnumDriveablePart.tail) && type.spinWithoutTail) flapsYaw = 15;
 
 		//Return the flaps to their resting position
 		flapsYaw *= 0.9F;
