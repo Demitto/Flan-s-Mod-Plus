@@ -224,7 +224,6 @@ public class DriveableType extends InfoType
     
     public boolean setPlayerInvisible = false;
     
-        
     public float maxThrottleInWater = 0.5F;
     public int maxDepth = 3;
 	
