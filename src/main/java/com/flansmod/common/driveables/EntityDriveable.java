@@ -124,11 +124,11 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	public int animFrameLeft = 0;
 	public int animCountRight = 0;
 	public int animFrameRight = 0;
-
+	
     public boolean leftTurnHeld = false;
     public boolean rightTurnHeld = false;
 
-
+	
 	public boolean isShowedPosition = false;
 
     public int tickCount = 0;
@@ -136,7 +136,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	public int impactX;
 	public int impactY;
 	public int impactZ;
-
+	
     //public boolean isLockedOn = false;
 
     //public int soundTime;
@@ -145,35 +145,35 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	public boolean neverLocked = true;
 	private String key;
 	private String lastKey;
-
+	
 	//Gun recoil
 	public boolean isRecoil = false;
 	public float recoilPos = 0;
 	public float lastRecoilPos = 0;
 	public int recoilTimer = 0;
-
+	
 	public Vector3f lastPos = new Vector3f(0,0,0);
 	public boolean hugeBoat = false;
 	public boolean onDeck = false;
 	public double deckHeight = 0;
 	public int deckCheck = 0;
 	public int prevDeckCheck = 0;
-
+	
 	public boolean isMecha = false;
-
+	
 	/** The angle of the propeller for the renderer */
 	public float propAngle = 0;
 	public float prevPropAngle = 0;
-
+	
 	public float rotorAngle = 0;
 	public float prevRotorAngle = 0;
-
+	
 	//Flares
     public int flareDelay = 0;
     public int ticksFlareUsing = 0;
 	public boolean varFlare;
-
-
+	
+	
 	@SideOnly(Side.CLIENT)
 	public EntityLivingBase camera;
 
@@ -588,7 +588,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		if(worldObj.isRemote)
 		{
 			FlansMod.getPacketHandler().sendToServer(new PacketDriveableKeyHeld(key, held));
-
+			
 			if(key == 2){
 				leftTurnHeld = true;
 				rightTurnHeld = false;
@@ -602,7 +602,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		}
 		switch(key)
 		{
-		case 9 : leftMouseHeld = held;
+		case 9 : leftMouseHeld = held; 
 		break;
 		case 8 : rightMouseHeld = held; break;
 		}
@@ -648,20 +648,20 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			float bkx = shootPoint.rootPos.position.x;
 			float bky = shootPoint.rootPos.position.y;
 			float bkz = shootPoint.rootPos.position.z;
-
+			
 			Vector3f velocity = new Vector3f(s.x, s.y, s.z);
 			Vector3f vv = lastPos;
 
 
 			//if(shootPoint.rootPos.part == EnumDriveablePart.turret){
 			velocity = getDirection(shootPoint, velocity);
-			//}
+			//} 
 
 			//Vector3f v = getFiringPosition(shootPoint);
-
+				
 			if(shootPoint.rootPos.part == EnumDriveablePart.core){
 				Vector3f v2 = axes.findLocalVectorGlobally(shootPoint.rootPos.position);
-				Vector3f v3 = rotate(seats[0].looking.findLocalVectorGlobally(shootPoint.offPos));
+				Vector3f v3 = rotate(seats[0].looking.findLocalVectorGlobally(shootPoint.offPos));				
 				Vector3f.add(v2, v3, v);
 			}
 
@@ -681,7 +681,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		//Rotate the gun vector to global axes
 		Vector3f gunVec = getFiringPosition(shootPoint);
 		Vector3f lookVector = getLookVector(shootPoint);
-
+		
 		if(weaponType == EnumWeaponType.SHELL)
 			isRecoil = true;
 
@@ -771,7 +771,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 						worldObj.spawnEntityInWorld(bulletEntity);
 
 						spawnParticle(type.shootParticle(secondary), shootPoint, gunVec);
-
+						
 
 						if(type.shootSound(secondary) != null)
 							PacketPlaySound.sendSoundPacket(posX, posY, posZ, FlansMod.soundRange, dimension, type.shootSound(secondary), false);
@@ -886,13 +886,13 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 
 		return rotate(localGunVec);
 	}
-
+	
 	public Vector3f getPositionOnTurret(Vector3f vecIn, boolean barrel)
 	{
-		Vector3f transform = vecIn;
+		Vector3f transform = vecIn;		
 		RotatedAxes yawOnlyLooking = new RotatedAxes(seats[0].looking.getYaw(), 0, 0);
 		if(barrel) yawOnlyLooking = seats[0].looking;
-
+		
 		//Calculate the root of the gun
 		//Untranslate by the turret origin, to get the rotation about the right point
 		Vector3f.sub(transform, getDriveableType().turretOrigin, transform);
@@ -903,10 +903,10 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		Vector3f turretOriginOffset = new Vector3f(getDriveableType().turretOriginOffset);
 		turretOriginOffset = yawOnlyLooking.findLocalVectorGloballyYaw(turretOriginOffset);
 		Vector3f.add(transform, turretOriginOffset, transform);
-
+		
 		return rotate(transform);
 	}
-
+	
 	public Vector3f getDirection(ShootPoint dp, Vector3f vIn)
 	{
 		//Rotate the gun vector to global axes
@@ -916,7 +916,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		//{
 			//localGunVec = seats[0].looking.findLocalVectorGlobally(localGunVec);
 		//}
-
+		
 		localGunVec = seats[0].looking.findLocalVectorGlobally(localGunVec);
 
 		return rotate(localGunVec);
@@ -926,7 +926,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	{
 		return axes.getXAxis();
 	}
-
+	
 	public Vector3f getFiringPosition(ShootPoint dp)
 	{
 		Vector3f rootVector = new Vector3f(dp.rootPos.position);
@@ -945,22 +945,22 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			Vector3f.add(localGunVec, getDriveableType().turretOrigin, localGunVec);
 			} else {
 			RotatedAxes yawOnlyLooking = new RotatedAxes(seats[0].looking.getYaw(), 0, 0);
-
+				
 			//Calculate the root of the gun
 			//Untranslate by the turret origin, to get the rotation about the right point
 			Vector3f.sub(rootVector, getDriveableType().turretOrigin, rootVector);
 			//Rotate by the turret angles
 			rootVector = yawOnlyLooking.findLocalVectorGlobally(rootVector);
 			//Translate by the turret origin
-			Vector3f.add(rootVector, getDriveableType().turretOrigin, rootVector);
-
+			Vector3f.add(rootVector, getDriveableType().turretOrigin, rootVector);					
+					
 			//Calculate the tip of the gun
 			//Untranslate by the turret origin, to get the rotation about the right point
 			Vector3f.sub(offsetVector, getDriveableType().turretOrigin, offsetVector);
 			//Rotate by the turret angles
 			offsetVector = seats[0].looking.findLocalVectorGlobally(offsetVector);
 			//Translate by the turret origin
-
+				
 			Vector3f.add(rootVector, offsetVector, localGunVec);
 			}
 		}
@@ -1005,7 +1005,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
     public void onUpdate()
     {
         super.onUpdate();
-
+       
 
         DriveableType type = getDriveableType();
         DriveableData data = getDriveableData();
@@ -1021,58 +1021,58 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			{
 			moveRiders((Entity)obj);
 			}
-
+			
 			if(obj instanceof EntityWheel && !isPartOfThis((Entity)obj) && getDistanceToEntity((Entity)obj) <= getDriveableType().bulletDetectionRadius)
 			{
 			//moveRiders((Entity)obj);
 			}
-
+			
 			if(obj instanceof EntityDriveable && !isPartOfThis((Entity)obj) && getDistanceToEntity((Entity)obj) <= getDriveableType().bulletDetectionRadius)
 			{
 			//moveRiders((Entity)obj);
 			}
 		}
 		}
-
+		
 		if(deckCheck != prevDeckCheck)
 			onDeck = true;
 		else onDeck = false;
 
-
+        
 		//Aesthetics
-
+		
 		//Aesthetics
 		prevPropAngle = propAngle;
 		prevRotorAngle = rotorAngle;
 		if(throttle != 0)
 		{
-			propAngle += (Math.pow(throttle, 0.4))*1.5;
+			propAngle += (Math.pow(throttle, 0.4))*1.5;	
 			rotorAngle += throttle/7F;
 		}
-
-
-
+		
+		
+		
 		//Gun recoil
         if(leftMouseHeld){
     		tryRecoil();
     		setRecoilTimer();
         }
         lastRecoilPos = recoilPos;
-
+        
 		if(recoilPos > 180-(180/type.recoilTime))
 		{
 			recoilPos = 0;
 			isRecoil = false;
 		}
-
+		
 		if(isRecoil)
 		recoilPos = recoilPos + (180/type.recoilTime);
-
+		
 		if(recoilTimer >= 0)
 		recoilTimer--;
 
         checkInventoryChanged();
-
+        
 		if(type.lockOnToLivings || type.lockOnToMechas || type.lockOnToPlanes || type.lockOnToPlayers || type.lockOnToVehicles)
 		{
 			if(!worldObj.isRemote && this.seats.length > 0 && lockOnSoundDelay <= 0)
@@ -1145,7 +1145,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
         		}
         	}
         }
-
+        
 
 		if(lastAtkEntity != null && lastAtkEntity instanceof EntityPlayer)
 		{
@@ -1200,7 +1200,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 								if(!InventoryHelper.addItemStackToInventory(driveableData, stack, driverIsCreative()) && !worldObj.isRemote && worldObj.getGameRules().getGameRuleBooleanValue("doTileDrops"))
 								{
 									worldObj.spawnEntityInWorld(new EntityItem(worldObj, blockX + 0.5F, blockY + 0.5F, blockZ + 0.5F, stack));
-								}
+								} 
 							}
 							} else if(type.dropHarvest){
 								ArrayList<ItemStack> stacks = block.getDrops(worldObj, blockX, blockY, blockZ, worldObj.getBlockMetadata(blockX, blockY, blockZ), 0);
@@ -1284,12 +1284,12 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
     		} else {
     			canEmit = false;
     		}
-
+    		
     		if((throttle >= emitter.minThrottle && throttle <= emitter.maxThrottle))
     			inThrottle = true;
     		if(isMecha)
     			inThrottle = true;
-
+    		
         	if(emitterTimers[i] <= 0)
         	{
         		if(inThrottle && canEmit){
@@ -1316,17 +1316,17 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 							 emitter.origin.y + rand.nextFloat() * emitter.extents.y - emitter.extents.y * 0.5f,
 							 emitter.origin.z + rand.nextFloat() * emitter.extents.z - emitter.extents.z * 0.5f);
 
-
+            		
             		pos = getPositionOnTurret(localPosition2,true);
             		velocity = getPositionOnTurret(emitter.velocity, true);
         		}
         		//FlansMod.proxy.spawnParticle(emitter.effectType, posX + pos.x, posY + pos.y, posZ + pos.z, velocity.x, velocity.y, velocity.z);
-
+        		
     			FlansMod.getPacketHandler().sendToAllAround(
     					new PacketParticle(emitter.effectType,
     	        				posX + pos.x, posY + pos.y, posZ + pos.z, velocity.x, velocity.y, velocity.z),
     	        				posX + pos.x, posY + pos.y, posZ + pos.z, 150, dimension);
-
+        		
         		}
         		}
         		emitterTimers[i] = emitter.emitRate;
@@ -1408,7 +1408,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 					shoot(true);
 			}
 		}
-
+		
 		prevDeckCheck = deckCheck;
 
 		//Handle fuel
@@ -1478,7 +1478,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 					data.fuelInTank += 2000 * fuelMultiplier;
 					data.setInventorySlotContents(i, new ItemStack(Items.bucket));
 				}
-
+				
 				prevPosX = posX;
 				prevPosY = posY;
 				prevPosZ = posZ;
@@ -1908,8 +1908,8 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	{
 		return onGround;
 	}
-
-
+	
+	
 	//Collision mechanism mkII
 	public void moveRiders(Entity rider)
 	{
@@ -1928,17 +1928,17 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 
 		Vector3f rotatedPosVector = axes.findGlobalVectorLocally(relativePos);
 		Vector3f rotatedMotionVector = axes.findGlobalVectorLocally(riderMotion);
-
+		
 		Vector3f ellipsoid = new Vector3f(rider.width, rider.height, rider.width);
-
+		
 		CollisionTest test = new CollisionTest(ellipsoid, new Vector3f(relativePos.x, relativePos.y, relativePos.z), riderMotion);
 		test.collisionRecursiveDepth = 0;
-
+		
 		Vector3f eSpacePosition = test.ConvertR3ToESpace(test.R3Position);
 		Vector3f eSpaceVelocity = test.velocity;
-
+		
 		//Vector3f finalPos = collideWithDriveable(test, eSpacePosition, eSpaceVelocity);
-
+		
 		//Check parts for collision
 		if(getDriveableType().fancyCollision)
 		{
@@ -1954,44 +1954,44 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		}
 		if(test.didCollide){
 		Vector3f finalPos = collideWithDriveable(test, eSpacePosition, eSpaceVelocity);
-
+				
 		Vector3f velocity = Vector3f.sub(finalPos, test.basePoint, null);
 		test.ConvertESpaceToR3(velocity);
 		finalPos = new Vector3f(finalPos.x * test.eRad.x, finalPos.y * test.eRad.y, finalPos.z * test.eRad.z);
 		Vector3f diff = Vector3f.sub(finalPos, vehiclePos, null);
-
-
+		
+		
 		if(rider.onGround && (riderPos.y + finalPos.y/48) < riderPos.y)
 		{
 			finalPos = new Vector3f(finalPos.x, 0, finalPos.z);
 		}
 		boolean onTop = (rider.posY + 0.65 > test.intersectionPoint.y);
-
+		
 		boolean stationary = (throttle == 0);
-
+		
 		//If finalPos returns null, do something about it. Probably not the best way to handle this.
 		if(finalPos == null) finalPos = new Vector3f(0,0,0);
-
+		
 		if(!hugeBoat)
 		rider.setPosition((!test.isOnTop)?riderPos.x + finalPos.x/(48*Math.abs(relativePos.x)): riderPos.x, rider.posY +((test.isOnTop)?Math.sqrt((finalPos.y/48)*(finalPos.y/48)):0),(!test.isOnTop)?riderPos.z + finalPos.z/(48*Math.abs(relativePos.z)): riderPos.z);
 		//rider.motionX += velocity.x;
 		rider.motionY = (velocity.y >= 0 && velocity.y <= 0.5)?0 : 0;
 		//rider.motionZ += velocity.z;
-
+		
 		Vector3f intersect2 = new Vector3f(test.ConvertESpaceToR3(test.intersectionPoint));
-
+		
 		if(hugeBoat && !stationary){
 			rider.setPosition(riderPos.x, rider.posY ,riderPos.z);
 		} else if (hugeBoat && stationary) {
-			rider.setPosition(riderPos.x, rider.posY + Math.sqrt((finalPos.y/48)*(finalPos.y/48)),riderPos.z);
+			rider.setPosition(riderPos.x, rider.posY + Math.sqrt((finalPos.y/48)*(finalPos.y/48)),riderPos.z);	
 		}
 
-
+		
 		rider.onGround = true;
 		rider.isAirBorne = false;
 		rider.fallDistance = 0;
 		//rider.isCollidedVertically = true;
-
+		
 		Vector3f intersect = test.intersectionPoint;
 		//worldObj.spawnParticle((test.isOnTop)?"fireworksSpark":"explode", posX + intersect.x, posY + intersect.y, posZ + intersect.z, 0,1,0);
 		//worldObj.spawnParticle((test.isOnTop)?"fireworksSpark":"explode", posX, posY, posZ, 0,1,0);
@@ -2000,9 +2000,9 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		//worldObj.spawnParticle("crit", posX + finalPos.x, posY + finalPos.y, posZ + finalPos.z, 0,0,0);
 		//worldObj.spawnParticle("reddust", riderPos.x, riderPos.y - 0.65, riderPos.z, 0,0,0);
 
-
+		
 		updateRiderPos(rider, test, finalPos, riderMotion);
-
+		
 		if(getDriveableType().collisionDamageEnable && !test.isOnTop)
 		{
 			if(throttle > getDriveableType().collisionDamageThrottle)
@@ -2014,10 +2014,10 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				}
 			}
 		}
-
+		
 		}
-
-		else
+		
+		else 
 		{
 			if(rider instanceof EntityDriveable)
 			{
@@ -2025,21 +2025,21 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				((EntityDriveable)rider).deckHeight = 0;
 			}
 		}
-
-
+		
+		
 	}
-
+	
 	public void checkCollision(CollisionTest tester, CollisionShapeBox box)
 	{
-		{
+		{		
 			double distance = 10;
 			Vector3f collisionPoint = new Vector3f(0,0,0);
 			int surface = 0;
-
+			
 			Vector3f pos = new Vector3f(this.posX, this.posY, this.posZ);
-
+			
 			RotatedAxes shift = axes;
-
+			
 			float f4 = box.pos.x + box.size.x;
 			float f5 = -box.pos.y + box.size.y;
 			float f6 = box.pos.z + box.size.z;
@@ -2053,7 +2053,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			Vector3f p6 = shift.findLocalVectorGlobally(new Vector3f(box.pos.x + box.size.x + box.p6.x, box.pos.y - box.p6.y, box.pos.z + box.size.z + box.p6.z)); //Front lower right
 			Vector3f p7 = shift.findLocalVectorGlobally(new Vector3f(box.pos.x - box.p7.x, box.pos.y - box.p7.y, box.pos.z + box.size.z + box.p7.z)); //Rear lower right
 			Vector3f p8 = shift.findLocalVectorGlobally(new Vector3f(box.pos.x - box.p8.x, box.pos.y - box.p8.y, box.pos.z - box.p8.z)); //Rear lower left
-
+			
 			if(EnumDriveablePart.getPart(box.part) == EnumDriveablePart.turret && seats[0] != null)
 			{
 				p1 = getPositionOnTurret(p1, false); //Front upper left
@@ -2065,8 +2065,8 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				p7 = getPositionOnTurret(p7, false); //Rear lower right
 				p8 = getPositionOnTurret(p8, false); //Rear lower left
 			}
-
-
+			
+			
 			//Check top face
 			double topFaceDist = 100;
 
@@ -2077,7 +2077,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				surface = 1;
 				tester.part = EnumDriveablePart.getPart(box.part);
 			}
-
+				
 			tester.checkTriangle(tester, p4, p3, p1);
 			if(tester.didCollide && tester.nearestDistance < distance)
 			{
@@ -2085,13 +2085,13 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				surface = 1;
 				tester.part = EnumDriveablePart.getPart(box.part);
 			}
-
+			
 			if(tester.didCollide){
 				tester.isOnTop = true;
 				topFaceDist = tester.nearestDistance;
 			}
-
-
+			
+			
 			//Check front face
 			tester.checkTriangle(tester, p1, p2, p6);
 			if(tester.didCollide && tester.nearestDistance < distance)
@@ -2109,7 +2109,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				surface = 2;
 				tester.part = EnumDriveablePart.getPart(box.part);
 			}
-
+			
 			//Check rear face
 			tester.checkTriangle(tester, p3, p4, p8);
 			if(tester.didCollide && tester.nearestDistance < distance)
@@ -2127,7 +2127,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				surface = 3;
 				tester.part = EnumDriveablePart.getPart(box.part);
 			}
-
+			
 			//Check Left Face
 			tester.checkTriangle(tester, p4, p1, p5);
 			if(tester.didCollide && tester.nearestDistance < distance)
@@ -2145,7 +2145,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				surface = 4;
 				tester.part = EnumDriveablePart.getPart(box.part);
 			}
-
+			
 			//Check right face
 			tester.checkTriangle(tester, p2, p3, p7);
 			if(tester.didCollide && tester.nearestDistance < distance)
@@ -2163,7 +2163,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				surface = 5;
 				tester.part = EnumDriveablePart.getPart(box.part);
 			}
-
+			
 			Vector3f.add(p1, pos, p1);
 			Vector3f.add(p2, pos, p2);
 			Vector3f.add(p3, pos, p3);
@@ -2172,11 +2172,11 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			Vector3f.add(p6, pos, p6);
 			Vector3f.add(p7, pos, p7);
 			Vector3f.add(p8, pos, p8);
-
+			
 			boolean muff = true;
 			String wank = "crit";
-
-
+			
+	
 			FlansMod.proxy.spawnParticle(wank, p1.x,p1.y,p1.z, 0,0,0);
 			FlansMod.proxy.spawnParticle(wank, p2.x,p2.y,p2.z, 0,0,0);
 			FlansMod.proxy.spawnParticle(wank, p3.x,p3.y,p3.z, 0,0,0);
@@ -2185,25 +2185,25 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			FlansMod.proxy.spawnParticle(wank, p6.x,p6.y,p6.z, 0,0,0);
 			FlansMod.proxy.spawnParticle(wank, p7.x,p7.y,p7.z, 0,0,0);
 			FlansMod.proxy.spawnParticle(wank, p8.x,p8.y,p8.z, 0,0,0);
-
+			
 			if(tester.nearestDistance < topFaceDist) tester.isOnTop = false;
-
+			
 			if(surface == 1) tester.isOnTop = true;
 		}
 
 	}
-
+	
 
 	public Vector3f collideWithDriveable(CollisionTest tester, Vector3f Pos, Vector3f vel)
 	{
 		float unitScale = 1/16F;
 		float veryCloseDistance = 0.005F * unitScale;
-
+		
 		if(tester.collisionRecursiveDepth > 2) return Pos;
-
+		
 		tester.basePoint = Pos;
 		tester.didCollide = false;
-
+		
 		if(getDriveableType().fancyCollision)
 		{
 			for(int i = 0; 1 < getDriveableType().collisionBox.size(); i++)
@@ -2216,81 +2216,81 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				ppart.rayTraceRider(this, tester);
 			}
 		}
-
+		
 		//If no collision, we just move along the velocity
 		if(tester.didCollide = false) return Vector3f.add(Pos, vel, null);
-
-
+		
+		
 		//Collision occured, time to sort this out
 		Vector3f destinationPoint = Vector3f.add(Pos, vel, null);
 		Vector3f newBasePoint = Pos;
-
+		
 		if(tester.nearestDistance >= veryCloseDistance)
 		{
 			Vector3f V = vel;
 			V.normalise();
 			V.scale((float)(tester.nearestDistance - veryCloseDistance));
 			newBasePoint = Vector3f.add(tester.basePoint, V, null);
-
+			
 			if(V.normalise() == new Vector3f(0,0,0)) return Vector3f.add(Pos, vel, null);
-
+			
 			V.normalise();
-
+			
 			//Change polygon intersection point so that the sliding plane is unaffected by the fact we move slightly less than collision tells us
 			Vector3f.sub(tester.intersectionPoint, new Vector3f(V.x * veryCloseDistance, V.y * veryCloseDistance, V.z * veryCloseDistance), tester.intersectionPoint);
 		}
-
+		
 		//Determine the sliding plane
 		Vector3f slidePlaneOrigin = tester.intersectionPoint;
 		Vector3f slidePlaneNormal = Vector3f.sub(newBasePoint, tester.intersectionPoint, null);
 		slidePlaneNormal.normalise();
-
+		
 		CollisionPlane plane = new CollisionPlane(slidePlaneOrigin, slidePlaneNormal);
-
+		
 		double sDV = plane.signedDistanceTo(destinationPoint);
 		Vector3f scaledNormal = new Vector3f(slidePlaneNormal.x * sDV, slidePlaneNormal.y * sDV, slidePlaneNormal.z * sDV);
 		Vector3f newDestPoint = Vector3f.sub(destinationPoint, scaledNormal, null);
-
+		
 		//Generate slide vector
 		Vector3f newVelocityVector = Vector3f.sub(newDestPoint, tester.intersectionPoint, null);
-
+		
 		if(newVelocityVector.length() < veryCloseDistance)
 		{
 			return newBasePoint;
 		}
-
+		
 		tester.collisionRecursiveDepth++;
-
+		
 		return collideWithDriveable(tester, newBasePoint, newVelocityVector);
 	}
-
+	
 	public void updateRiderPos (Entity rider, CollisionTest test, Vector3f pos, Vector3f motion)
 	{
 		boolean isDriveable = false;
 		if(rider instanceof EntityDriveable) isDriveable = true;
 		Vector3f vehicleMotion = lastPos;
-
+		
 		Vector3f riderMountPoint = new Vector3f(rider.posX - posX, rider.posY - posY, rider.posZ - posZ);
-
+		
 		float yawDiff = axes.getYaw() - prevAxes.getYaw();
 		float pitchDiff = axes.getPitch() - prevAxes.getPitch();
 		float rollDiff = axes.getRoll() - prevAxes.getRoll();
-
+		
 		RotatedAxes velAxes = new RotatedAxes(axes.getYaw() + yawDiff, axes.getPitch() + pitchDiff, axes.getRoll() + rollDiff);
-
+		
 		Vector3f currentLocalPos = axes.findGlobalVectorLocally(riderMountPoint);
 		Vector3f nextGlobalPos = velAxes.findLocalVectorGlobally(currentLocalPos);
-
+		
 		Vector3f diff = new Vector3f(0,0,0);
-
+		
 		//Some rubbish null checks
 		if(nextGlobalPos == null) nextGlobalPos = new Vector3f(0,0,0);
 		if(diff == null) diff = new Vector3f(0,0,0);
-
+		
 		Vector3f.add(vehicleMotion, diff, diff);
 		rider.setPosition(nextGlobalPos.x + posX + ((hugeBoat)?diff.x/(1.5):0), (!isDriveable)?rider.posY:((EntityDriveable)rider).deckHeight, nextGlobalPos.z + posZ + ((hugeBoat)?diff.z/(1.5):0));
 
-
+				
 		if(hugeBoat){
 			if(lastPos.x == 0 && lastPos.y == 0 && lastPos.z == 0)
 			{
@@ -2304,8 +2304,8 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				//rider.motionY = 0;
 				//rider.motionZ = -rider.motionZ + diff.z;
 			}
-
-		}
+		
+		} 
 		else
 		{
 		if(lastPos.x == 0 && lastPos.y == 0 && lastPos.z == 0)
@@ -2318,20 +2318,20 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		{
 			rider.motionX = diff.x;
 			rider.motionY = diff.y;
-			rider.motionZ = diff.z;
+			rider.motionZ = diff.z;	
 		}
-
+		
 		rider.onGround = true;
 		rider.isAirBorne = false;
 		rider.fallDistance = 0;
 		//rider.isCollidedVertically = true;
 		}
-
+		
 	}
-
+	
 	public void handleVehicleCollision(EntityDriveable collided, CollisionTest test, Vector3f finalPos, boolean hugeBoat)
 	{
-
+		
 	}
 
 	/** Attack method called by bullets hitting the plane. Does advanced raytracing to detect which part of the plane is hit */
@@ -2353,7 +2353,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		}
 		return hits;
 	}
-
+	
 	/** Attack method called by bullets hitting the plane. Does advanced raytracing to detect which part of the plane is hit */
 	public ArrayList<BulletHit> attackFromBulletButBetter(Vector3f origin, Vector3f motion, float size)
 	{
@@ -2367,12 +2367,12 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 
 		Vector3f rotatedPosVector = axes.findGlobalVectorLocally(relativePos);
 		Vector3f rotatedMotionVector = axes.findGlobalVectorLocally(motion);
-
+		
 		Vector3f ellipsoid = new Vector3f(size, size, size);
-
+		
 		CollisionTest test = new CollisionTest(ellipsoid, new Vector3f(relativePos.x, relativePos.y, relativePos.z), motion);
 		test.collisionRecursiveDepth = 0;
-
+		
 		Vector3f eSpacePosition = test.ConvertR3ToESpace(test.R3Position);
 		Vector3f eSpaceVelocity = test.velocity;
 
@@ -2380,7 +2380,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		{
 			ppart.rayTraceRider(this, test);
 		}
-
+		
 		if(test.didCollide)
 		{
 			Vector3f hitPos = new Vector3f(0,0,0);
@@ -2390,9 +2390,9 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			DriveableHit hit = new DriveableHit(this, test.part, f);
 			hits.add(hit);
 		}
-
+		
 		return hits;
-
+	
 	}
 
 	/** Called if the bullet actually hit the part returned by the raytrace
@@ -2667,7 +2667,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		player.addChatMessage(new ChatComponentText("Locked"));
 		}
 	}
-
+	
 	public void tryRecoil()
 	{
 		int slot = -1;
@@ -2684,7 +2684,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		if(recoilTimer <= 0 && slot != -1)
 		isRecoil = true;
 	}
-
+	
 	public void setRecoilTimer()
 	{
 		int slot = -1;
