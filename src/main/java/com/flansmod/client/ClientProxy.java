@@ -360,6 +360,12 @@ public class ClientProxy extends CommonProxy
 	}
 
 	@Override
+	public EntityPlayer getThePlayer()
+	{
+		return FMLClientHandler.instance().getClient().thePlayer;
+	}
+
+	@Override
 	public boolean isOnSameTeamClientPlayer(EntityLivingBase entity)
 	{
 		return FMLClientHandler.instance().getClient().thePlayer.isOnSameTeam(entity);
