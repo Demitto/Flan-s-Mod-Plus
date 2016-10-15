@@ -99,6 +99,11 @@ public class CommonProxy
 		return false;
 	}
 	
+	public EntityPlayer getThePlayer()
+	{
+		return null;
+	}
+
 	public boolean isOnSameTeamClientPlayer(EntityLivingBase entity)
 	{
 		return false;
