@@ -42,7 +42,6 @@ import com.flansmod.common.guns.ItemBullet;
 import com.flansmod.common.guns.raytracing.BulletHit;
 import com.flansmod.common.network.PacketDriveableKey;
 import com.flansmod.common.network.PacketDriveableKeyHeld;
-import com.flansmod.common.network.PacketIT1Reload;
 import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketPlaySound;
 import com.flansmod.common.network.PacketVehicleControl;
