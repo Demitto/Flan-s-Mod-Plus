@@ -293,7 +293,9 @@ public class RenderPlane extends Render implements IItemRenderer
 		}
 		GL11.glPopMatrix();
 	}
-	
+
+	//Non-functional method to rotate player model. Rework
+	/**
     @SubscribeEvent
     public void preRenderLiving(RenderPlayerEvent.Pre event)
     {
@@ -340,5 +342,6 @@ public class RenderPlane extends Render implements IItemRenderer
     		}
     	}
     }
+    */
 
 }
