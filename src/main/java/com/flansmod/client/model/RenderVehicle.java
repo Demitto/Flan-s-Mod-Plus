@@ -23,6 +23,7 @@ import com.flansmod.common.driveables.EnumDriveablePart;
 import com.flansmod.common.driveables.ItemVehicle;
 import com.flansmod.common.driveables.ShootPoint;
 import com.flansmod.common.driveables.VehicleType;
+import com.flansmod.common.vector.Vector3f;
 
 public class RenderVehicle extends Render implements IItemRenderer
 {
@@ -41,12 +42,6 @@ public class RenderVehicle extends Render implements IItemRenderer
     		}
     	}
 			
-		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
-		GL11.glEnable(GL11.GL_BLEND);
-		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
-		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
     	bindEntityTexture(vehicle);
     	VehicleType type = vehicle.getVehicleType();
         GL11.glPushMatrix();
@@ -77,6 +72,32 @@ public class RenderVehicle extends Render implements IItemRenderer
 					GL11.glScalef(type.modelScale, type.modelScale, type.modelScale);
 					if(modVehicle != null)
 						modVehicle.render(vehicle, f1);
+					
+			        for(int i = 0; i < vehicle.trackLinksLeft.length; i++)
+			        {
+			        	AnimTrackLink link = vehicle.trackLinksLeft[i];
+			        	float rotZ = link.zRot;
+			        	GL11.glPushMatrix();
+			        	GL11.glTranslatef(link.position.x/16F, link.position.y/16F, link.position.z/16F);
+						for(; rotZ > 180F; rotZ -= 360F) {}
+						for(; rotZ <= -180F; rotZ += 360F) {}
+			        	GL11.glRotatef(rotZ * (float)(180/Math.PI), 0, 0, 1);
+			        	modVehicle.renderFancyTracks(vehicle, f1);
+			        	GL11.glPopMatrix();
+			        }
+			        
+			        for(int i = 0; i < vehicle.trackLinksRight.length; i++)
+			        {
+			        	AnimTrackLink link = vehicle.trackLinksRight[i];
+			        	float rotZ = link.zRot;
+						for(; rotZ > 180F; rotZ -= 360F) {}
+						for(; rotZ <= -180F; rotZ += 360F) {}
+			        	GL11.glPushMatrix();
+			        	GL11.glTranslatef(link.position.x/16F, link.position.y/16F, link.position.z/16F);
+			        	GL11.glRotatef(rotZ * (float)(180/Math.PI), 0, 0, 1);
+			        	modVehicle.renderFancyTracks(vehicle, f1);
+			        	GL11.glPopMatrix();
+			        }
 					
 					if(type.turretOrigin != null && vehicle.isPartIntact(EnumDriveablePart.turret) && vehicle.seats != null && vehicle.seats[0] != null)
 					{
@@ -132,7 +153,7 @@ public class RenderVehicle extends Render implements IItemRenderer
 						for(ShootPoint point : type.shootPointsPrimary)			
 							if(point.rootPos.part == EnumDriveablePart.turret)
 								renderAABB(AxisAlignedBB.getBoundingBox(point.rootPos.position.x - 0.25F, point.rootPos.position.y - 0.25F, point.rootPos.position.z - 0.25F, point.rootPos.position.x + 0.25F, point.rootPos.position.y + 0.25F, point.rootPos.position.z + 0.25F));
-						
+
 						GL11.glColor4f(0F, 1F, 0F, 0.3F);
 						for(ShootPoint point : type.shootPointsSecondary)	
 							if(point.rootPos.part == EnumDriveablePart.turret)
@@ -154,13 +175,26 @@ public class RenderVehicle extends Render implements IItemRenderer
 				
 				if(modVehicle != null)
 				{
-					//Rotate/Render door
+					Vector3f newRot = Interpolate(vehicle.doorRot, vehicle.prevDoorRot, f1);
+					Vector3f newPos = Interpolate(vehicle.doorPos, vehicle.prevDoorPos, f1);
+					
 					GL11.glPushMatrix();
-					GL11.glTranslatef(modVehicle.doorAttach.x + vehicle.doorPos.x/16, modVehicle.doorAttach.y + vehicle.doorPos.y/16, -modVehicle.doorAttach.z + vehicle.doorPos.z/16);
-					GL11.glRotatef(vehicle.doorRot.x, 1F, 0F, 0F);
-					GL11.glRotatef(-vehicle.doorRot.y, 0F, 1F, 0F);
-					GL11.glRotatef(vehicle.doorRot.z, 0F, 0F, 1F);
+					GL11.glTranslatef(modVehicle.doorAttach.x + newPos.x/16, modVehicle.doorAttach.y + newPos.y/16, -modVehicle.doorAttach.z + newPos.z/16);
+					GL11.glRotatef(newRot.x, 1F, 0F, 0F);
+					GL11.glRotatef(-newRot.y, 0F, 1F, 0F);
+					GL11.glRotatef(newRot.z, 0F, 0F, 1F);
 					modVehicle.renderDoor(vehicle, 0.0625F);
+					GL11.glPopMatrix();
+					
+					Vector3f newRot2 = Interpolate(vehicle.door2Rot, vehicle.prevDoor2Rot, f1);
+					Vector3f newPos2 = Interpolate(vehicle.door2Pos, vehicle.prevDoor2Pos, f1);
+					
+					GL11.glPushMatrix();
+					GL11.glTranslatef(modVehicle.door2Attach.x + newPos2.x/16, modVehicle.door2Attach.y + newPos2.y/16, -modVehicle.door2Attach.z + newPos2.z/16);
+					GL11.glRotatef(newRot2.x, 1F, 0F, 0F);
+					GL11.glRotatef(-newRot2.y, 0F, 1F, 0F);
+					GL11.glRotatef(newRot2.z, 0F, 0F, 1F);
+					modVehicle.renderDoor2(vehicle, 0.0625F);
 					GL11.glPopMatrix();
 				}
 			}
@@ -203,9 +237,6 @@ public class RenderVehicle extends Render implements IItemRenderer
 			}
         }
         GL11.glPopMatrix();
-
-		GL11.glBlendFunc(srcBlend, dstBlend);
-		GL11.glDisable(GL11.GL_BLEND);
     }
 
     @Override
@@ -240,12 +271,6 @@ public class RenderVehicle extends Render implements IItemRenderer
 	@Override
 	public void renderItem(ItemRenderType type, ItemStack item, Object... data) 
 	{
-		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
-		GL11.glEnable(GL11.GL_BLEND);
-		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
-		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
 		GL11.glPushMatrix();
 		if(item != null && item.getItem() instanceof ItemVehicle)
 		{
@@ -287,9 +312,13 @@ public class RenderVehicle extends Render implements IItemRenderer
 			}
 		}
 		GL11.glPopMatrix();
-
-		GL11.glBlendFunc(srcBlend, dstBlend);
-		GL11.glDisable(GL11.GL_BLEND);
+	}
+	
+	public Vector3f Interpolate(Vector3f current, Vector3f prev, float f1)
+	{
+		Vector3f result;
+		result = new Vector3f(prev.x + (current.x-prev.x)*f1,prev.y + (current.y-prev.y)*f1, prev.z + (current.z-prev.z)*f1);
+		return result;
 	}
 }
 

@@ -63,7 +63,7 @@ public class EntityBigSmoke extends EntityExplodeFX
 		double dx = (this.posX-this.prevPosX) / NUM;
 		double dy = (this.posY-this.prevPosY) / NUM;
 		double dz = (this.posZ-this.prevPosZ) / NUM;
-		FlansMod.proxy.spawnParticle("hugeexplosion",
+		FlansMod.proxy.spawnParticle("flansmod.rocketexhaust",
 			this.prevPosX + dx*1 + 5*Math.random(),
 			this.prevPosY + dy*1 + 7*Math.random(),
 			this.prevPosZ + dz*1 + 5*Math.random(),

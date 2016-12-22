@@ -50,19 +50,19 @@ public class EntityCamera extends EntityLivingBase
 		setPosition(posX + dX * lerpAmount, posY + dY * lerpAmount, posZ + dZ * lerpAmount);
 		
 		if(FlansMod.proxy.mouseControlEnabled())
-		{
-			rotationYaw = driveable.axes.getYaw() - 90F;
-			rotationPitch = driveable.axes.getPitch();
-		}
-		else
-		{
-			Entity player = FlansMod.proxy.getThePlayer();
-			if(player != null)
 			{
-				rotationYaw		= player.rotationYaw;
-				rotationPitch	= player.rotationPitch;
+				rotationYaw = driveable.axes.getYaw() - 90F;
+				rotationPitch = driveable.axes.getPitch();
 			}
-		}
+			else
+			{
+				Entity player = FlansMod.proxy.getThePlayer();
+				if(player != null)
+				{
+					rotationYaw		= player.rotationYaw;
+					rotationPitch	= player.rotationPitch;
+				}
+			}
 		
 		for(; rotationYaw - prevRotationYaw >= 180F; rotationYaw -= 360F) ;
 		for(; rotationYaw - prevRotationYaw < -180F; rotationYaw += 360F) ;

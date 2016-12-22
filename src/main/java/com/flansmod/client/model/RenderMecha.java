@@ -48,12 +48,6 @@ public class RenderMecha extends Render implements IItemRenderer
 	
     public void render(EntityMecha mecha, double d, double d1, double d2, float f, float f1)
     {
-		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
-		GL11.glEnable(GL11.GL_BLEND);
-		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
-		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
     	bindEntityTexture(mecha);
     	float scale = 1F / 16F;
     	MechaType type = mecha.getMechaType();
@@ -349,9 +343,6 @@ public class RenderMecha extends Render implements IItemRenderer
 		}
 		GL11.glPopMatrix();
 	    }
-
-		GL11.glBlendFunc(srcBlend, dstBlend);
-		GL11.glDisable(GL11.GL_BLEND);
     }
 	
 	@Override
@@ -383,12 +374,6 @@ public class RenderMecha extends Render implements IItemRenderer
 	
     private void renderItem(EntityMecha mecha, ItemStack stack, int par3, boolean leftHand, float dT)
     {
-		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
-		GL11.glEnable(GL11.GL_BLEND);
-		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
-		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
         GL11.glPushMatrix();
         TextureManager texturemanager = Minecraft.getMinecraft().getTextureManager();
 		Item item = stack.getItem();
@@ -422,7 +407,8 @@ public class RenderMecha extends Render implements IItemRenderer
 			
 			GL11.glRotatef(-90F, 0F, 0F, 1F);
 			texturemanager.bindTexture(FlansModResourceHandler.getTexture(gunType));
-			ClientProxy.gunRenderer.renderGun(stack, gunType, 1F / 16F, model, leftHand ? mecha.leftAnimations : mecha.rightAnimations, 0F);
+			ItemRenderType type = ItemRenderType.ENTITY;
+			ClientProxy.gunRenderer.renderGun(stack, gunType, 1F / 16F, model, leftHand ? mecha.leftAnimations : mecha.rightAnimations, 0F, type);
 		}
 		else
 		{
@@ -430,9 +416,6 @@ public class RenderMecha extends Render implements IItemRenderer
 	        if (icon == null)
 	        {
 	            GL11.glPopMatrix();
-
-				GL11.glBlendFunc(srcBlend, dstBlend);
-				GL11.glDisable(GL11.GL_BLEND);
 	            return;
 	        }
 	
@@ -488,9 +471,6 @@ public class RenderMecha extends Render implements IItemRenderer
 	        GL11.glDisable(GL12.GL_RESCALE_NORMAL);
 		}
         GL11.glPopMatrix();
-
-		GL11.glBlendFunc(srcBlend, dstBlend);
-		GL11.glDisable(GL11.GL_BLEND);
     }
     
     @Override
@@ -513,12 +493,6 @@ public class RenderMecha extends Render implements IItemRenderer
 	@Override
 	public void renderItem(ItemRenderType type, ItemStack item, Object... data) 
 	{
-		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
-		GL11.glEnable(GL11.GL_BLEND);
-		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
-		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
 		GL11.glPushMatrix();
 		if(item != null && item.getItem() instanceof ItemMecha)
 		{
@@ -561,8 +535,5 @@ public class RenderMecha extends Render implements IItemRenderer
 			}
 		}
 		GL11.glPopMatrix();
-
-		GL11.glBlendFunc(srcBlend, dstBlend);
-		GL11.glDisable(GL11.GL_BLEND);
 	}
 }

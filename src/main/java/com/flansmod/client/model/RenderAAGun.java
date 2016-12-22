@@ -27,12 +27,6 @@ public class RenderAAGun extends Render
     		}
     	}
 
-		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
-		GL11.glEnable(GL11.GL_BLEND);
-		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
-		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
     	bindEntityTexture(aa);
 		GL11.glPushMatrix();
 		GL11.glTranslatef((float) d, (float) d1, (float) d2);
@@ -50,9 +44,6 @@ public class RenderAAGun extends Render
 			modelAAGun.renderGun(0.0F, 0.0F, -0.1F, 0.0F, 0.0F, 0.0625F, aa);
 		}
 		GL11.glPopMatrix();
-
-		GL11.glBlendFunc(srcBlend, dstBlend);
-		GL11.glDisable(GL11.GL_BLEND);
 	}
 
 	@Override

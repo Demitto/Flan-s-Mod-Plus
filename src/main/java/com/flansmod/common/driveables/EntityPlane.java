@@ -68,6 +68,10 @@ public class EntityPlane extends EntityDriveable
 	public Vector3f prevTailWheelRot = new Vector3f(0,0,0);
 	public Vector3f prevDoorPos = new Vector3f(0,0,0);
 	public Vector3f prevDoorRot = new Vector3f(0,0,0);
+	public float xSpeed = 0;
+	public float ySpeed = 0;
+	public float zSpeed = 0;
+	public float rollSpeed = 0;
 
 
     public EntityPlane(World world)
@@ -136,11 +140,18 @@ public class EntityPlane extends EntityDriveable
 
 		float sensitivity = 0.02F;
 
+	
 		flapsPitchLeft -= sensitivity * deltaY;
 		flapsPitchRight -= sensitivity * deltaY;
 
+		if(mode != EnumPlaneMode.SIXDOF){
 		flapsPitchLeft -= sensitivity * deltaX;
 		flapsPitchRight += sensitivity * deltaX;
+		} else {
+			flapsPitchLeft -= sensitivity * deltaX;
+			flapsPitchRight += sensitivity * deltaX;
+		//flapsYaw += sensitivity * deltaX;
+		}
 	}
 
 	@Override
@@ -213,6 +224,7 @@ public class EntityPlane extends EntityDriveable
 					throttle += 0.002F;
 					if(throttle > 1F)
 						throttle = 1F;
+					xSpeed += 0.5F;
 				}
 				return true;
 			}
@@ -225,29 +237,40 @@ public class EntityPlane extends EntityDriveable
 						throttle = -1F;
 					if(throttle < 0F && type.maxNegativeThrottle == 0F)
 						throttle = 0F;
+					xSpeed -=0.5F;
 				}
 				return true;
 			}
 			case 2 : //Left : Yaw the flaps left
 			{
+				if(mode != EnumPlaneMode.SIXDOF)
 				flapsYaw -= 1F;
+				zSpeed -= 1F;
 				return true;
 			}
 			case 3 : //Right : Yaw the flaps right
 			{
+				if(mode != EnumPlaneMode.SIXDOF)
 				flapsYaw += 1F;
+				zSpeed += 1F;
 				return true;
 			}
 			case 4 : //Up : Pitch the flaps up
 			{
+				if(mode != EnumPlaneMode.SIXDOF){
 				flapsPitchLeft += 1F;
 				flapsPitchRight += 1F;
+				}
+				ySpeed += 1F;
 				return true;
 			}
 			case 5 : //Down : Pitch the flaps down
 			{
+				if(mode != EnumPlaneMode.SIXDOF){
 				flapsPitchLeft -= 1F;
 				flapsPitchRight -= 1F;
+				}
+				ySpeed -= 1F;
 				return true;
 			}
 			case 6 : //Exit : Get out
@@ -277,14 +300,23 @@ public class EntityPlane extends EntityDriveable
 			}
 			case 11 : //Roll left
 			{
-				flapsPitchLeft += 1F;
-				flapsPitchRight -= 1F;
+				if(mode != EnumPlaneMode.SIXDOF){
+					flapsPitchLeft += 1F;
+					flapsPitchRight -= 1F;
+				} else {
+					flapsYaw -=0.25F;
+				}
+				
 				return true;
 			}
 			case 12 : //Roll right
 			{
-				flapsPitchLeft -= 1F;
-				flapsPitchRight += 1F;
+				if(mode != EnumPlaneMode.SIXDOF){
+					flapsPitchLeft -= 1F;
+					flapsPitchRight += 1F;
+				} else {
+					flapsYaw +=0.25F;
+				}
 				return true;
 			}
 			case 13 : // Gear
@@ -398,6 +430,7 @@ public class EntityPlane extends EntityDriveable
 		prevDoorPos = doorPos;
 		prevDoorRot = doorRot;
 		
+		mode = EnumPlaneMode.SIXDOF;
 
 		//Get plane type
         PlaneType type = getPlaneType();
@@ -424,10 +457,11 @@ public class EntityPlane extends EntityDriveable
 		{
 			if(this.ticksExisted % 5 ==0)
 			{
+				Vector3f dir = axes.findLocalVectorGlobally(new Vector3f(0,-0.5F,0));
 				FlansMod.proxy.spawnParticle("flansmod.flare", this.posX, this.posY, this.posZ,
-					this.motionX + (this.rand.nextDouble() - 0.5),
-					this.motionY,
-					this.motionZ + (this.rand.nextDouble() - 0.5));
+					dir.x,
+					dir.y,
+					dir.z);
 			}
 		}
 		if(this.ticksFlareUsing > 0)
@@ -572,6 +606,7 @@ public class EntityPlane extends EntityDriveable
 			sensitivityAdjust = 0F;
 		//Scalar
 		sensitivityAdjust *= 0.125F;
+		if(mode == EnumPlaneMode.SIXDOF) sensitivityAdjust = 1F;
 
 		float yaw = flapsYaw * (flapsYaw > 0 ? type.turnLeftModifier : type.turnRightModifier) * sensitivityAdjust;
 
@@ -749,6 +784,35 @@ public class EntityPlane extends EntityDriveable
 			data.fuelInTank -= throttleScaled * fuelConsumptionMultiplier * data.engine.fuelConsumption;
 			}
 			break;
+			
+		case SIXDOF:
+			
+			float newSpeed = lastTickSpeed + throttleScaled * 2F;
+			
+			float proportionOfMotionToCorrect = 2F * throttle - 0.5F;
+			if(proportionOfMotionToCorrect < 0F)
+				proportionOfMotionToCorrect = 0F;
+			if(proportionOfMotionToCorrect > 1.5F)
+				proportionOfMotionToCorrect = 1.5F;
+			
+			newSpeed *= 1F - proportionOfMotionToCorrect;
+			newSpeed += proportionOfMotionToCorrect * newSpeed;
+			
+			Vector3f speed = new Vector3f(xSpeed, ySpeed*0.1F, zSpeed*0.1F);
+
+			speed = axes.findLocalVectorGlobally(speed);
+			
+
+			motionX = speed.x;
+			motionY = speed.y;
+			motionZ = speed.z;
+			
+			xSpeed *= 0.1F;
+			ySpeed *= 0.9F;
+			zSpeed *= 0.9F;
+			
+			break;
+		
 		default:
 			break;
 		}

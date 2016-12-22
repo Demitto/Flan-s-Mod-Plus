@@ -31,6 +31,8 @@ public class CollisionTest {
 	
 	public boolean isOnTop = false;
 	
+	public Vector3f collisionPlaneNormal;
+	
 	public EnumDriveablePart part;
 	
 	//Initial constructor, check triangles based on this.

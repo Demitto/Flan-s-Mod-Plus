@@ -139,6 +139,7 @@ public class GuiDriveableController extends GuiScreen
 	{
 		if(mc.gameSettings.thirdPersonView == 1)
 			mc.renderViewEntity = (plane.getCamera() == null ? mc.thePlayer : plane.getCamera());
+		
 		else mc.renderViewEntity = mc.thePlayer;
 	}
 	

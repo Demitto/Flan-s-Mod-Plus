@@ -2,15 +2,16 @@ package com.flansmod.common.network;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
-
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
+import com.flansmod.client.FlansModClient;
+import com.flansmod.client.model.GunAnimations;
 import com.flansmod.common.FlansMod;
+import com.flansmod.common.guns.GunType;
 import com.flansmod.common.guns.ItemGun;
 
 public class PacketGunFire extends PacketBase 
@@ -19,6 +20,7 @@ public class PacketGunFire extends PacketBase
 	public boolean left;
 	public float yaw;
 	public float pitch;
+
 	
 	public PacketGunFire() {}
 	
@@ -28,6 +30,7 @@ public class PacketGunFire extends PacketBase
 		held = h;
 		yaw  = y;
 		pitch= p;
+
 	}
 
 	@Override
@@ -37,6 +40,7 @@ public class PacketGunFire extends PacketBase
 		data.writeBoolean(left);
 		data.writeFloat(yaw);
 		data.writeFloat(pitch);
+
 	}
 
 	@Override
@@ -61,6 +65,7 @@ public class PacketGunFire extends PacketBase
 			((ItemGun)currentItem.getItem()).onMouseHeld(currentItem, playerEntity.worldObj, playerEntity, left, held);
 			playerEntity.rotationYaw	= bkYaw;
 			playerEntity.rotationPitch	= bkPitch;
+
 		}
 	}
 
@@ -69,5 +74,7 @@ public class PacketGunFire extends PacketBase
 	public void handleClientSide(EntityPlayer clientPlayer) 
 	{
 		FlansMod.log("Received gun button packet on client. Skipping.");
+		ItemStack currentItem = clientPlayer.inventory.getCurrentItem();
+
 	}
 }

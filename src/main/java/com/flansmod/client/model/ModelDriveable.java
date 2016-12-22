@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.OpenGlHelper;
 import com.flansmod.client.tmt.ModelRendererTurbo;
 import com.flansmod.common.driveables.DriveableType;
 import com.flansmod.common.driveables.EntityDriveable;
+import com.flansmod.common.vector.Vector3f;
 
 public class ModelDriveable extends ModelBase 
 {

@@ -643,6 +643,17 @@ public class CommandTeams extends CommandBase
 			sender.addChatMessage(new ChatComponentText("Vehicles will " + (TeamsManager.driveablesBreakBlocks ? "now" : "no longer") + " break blocks"));
 			return;
 		}
+		if(split[0].equals("vehiclesCanZoom"))
+		{
+			if(split.length != 2)
+			{
+				sender.addChatMessage(new ChatComponentText("Incorrect Usage : Should be /teams " + split[0] + " <true/false>"));
+				return;
+			}
+			TeamsManager.allowVehicleZoom = Boolean.parseBoolean(split[1]);
+			sender.addChatMessage(new ChatComponentText("Vehicles will " + (TeamsManager.allowVehicleZoom ? "now" : "no longer") + " be able to zoom"));
+			return;
+		}
 		if(split[0].equals("scoreDisplayTime"))
 		{
 			if(split.length != 2)
@@ -798,6 +809,7 @@ public class CommandTeams extends CommandBase
 					"ping",
 					"bltss",
 					"showbltss",
+					"vehiclesCanZoom"
 			});
 		}
 		
@@ -873,6 +885,7 @@ public class CommandTeams extends CommandBase
 			sender.addChatMessage(new ChatComponentText("/teams ping <PlayerName>"));
 			sender.addChatMessage(new ChatComponentText("/teams bltss <0 ... 100> <0 ... 1000>"));
 			sender.addChatMessage(new ChatComponentText("/teams showbltss"));
+			sender.addChatMessage(new ChatComponentText("/teams vehiclesCanZoom <true / false>"));
 			break;
 		}
 		}

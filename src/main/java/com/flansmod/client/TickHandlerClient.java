@@ -471,6 +471,19 @@ public class TickHandlerClient
 						if(entP.flareDelay > 0)
 							mc.fontRenderer.drawString("Smoke : Reloading"  , 2, 52, 0xdaa520);
 					}
+					
+					if(((EntityVehicle)ent).getVehicleType().shootWithOpenDoor)
+					{
+						if(((EntityVehicle)ent).varDoor){
+							mc.fontRenderer.drawString("Weapon : READY"  , 2, 62, 0x00ff00);
+							mc.fontRenderer.drawString("["+ Keyboard.getKeyName(KeyInputHandler.doorKey.getKeyCode())+ " to disable]", 100, 62, 0x00ff00);
+						}
+
+						if(!((EntityVehicle)ent).varDoor){
+							mc.fontRenderer.drawString("Weapon : DISABLED"  , 2, 62, 0xff0000);
+							mc.fontRenderer.drawString("["+ Keyboard.getKeyName(KeyInputHandler.doorKey.getKeyCode())+ " to activate]", 100, 62, 0xff0000);
+						}
+					}
 				}
 
 				if(FlansMod.DEBUG)

@@ -80,12 +80,20 @@ public class EntitySmokeGrenade extends EntityFX
 		{
 			this.setDead();
 		}
+		
+
 
 		this.motionY -= 0.04D * (double) this.particleGravity;
 		this.moveEntity(this.motionX, this.motionY, this.motionZ);
 		this.motionX *= 0.99;
 		this.motionY *= 0.99;
 		this.motionZ *= 0.99;
+		
+		if(worldObj.isAnyLiquid(this.boundingBox))
+		{
+			this.motionY = 1;
+			
+		}
 		
 		dischargeTime --;
 		

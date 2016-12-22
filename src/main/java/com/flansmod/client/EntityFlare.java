@@ -102,7 +102,7 @@ public class EntityFlare extends EntityFX
 			double dx = (this.posX-this.prevPosX) / NUM;
 			double dy = (this.posY-this.prevPosY) / NUM;
 			double dz = (this.posZ-this.prevPosZ) / NUM;
-			FlansMod.proxy.spawnParticle("explode",
+			FlansMod.proxy.spawnParticle("flansmod.fmflame",
 				this.prevPosX + dx*i,
 				this.prevPosY + dy*i,
 				this.prevPosZ + dz*i,

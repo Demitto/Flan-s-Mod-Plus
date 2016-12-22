@@ -4,11 +4,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
+
 import net.minecraft.block.material.Material;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemDye;
 import net.minecraft.item.ItemStack;
 
+import com.flansmod.client.model.AnimTankTrack;
 import com.flansmod.client.model.ModelDriveable;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.guns.BulletType;
@@ -200,32 +203,40 @@ public class DriveableType extends InfoType
 	public boolean lockOnToPlanes = false, lockOnToVehicles = false, lockOnToMechas = false, lockOnToPlayers = false, lockOnToLivings = false;
 
 	//flares
-	public boolean	hasFlare	= true;
+	public boolean	hasFlare	= false;
 	public int		flareDelay	= 20*10;
 	public String	flareSound	= "";
 	public int 		timeFlareUsing = 1;
 
 	// radar (for mapwriter)
 	/** The height of the entity that can be detected by radar.<br>
-	 * -1 = It does not detect.<br> */
+	* -1 = It does not detect.<br> */
 	public int radarDetectableAltitude = -1;
 	public boolean stealth = false;
-
+	
     /** Barrel Recoil stuff */
     public float recoilDist = 5F;
     public float recoilTime = 5F;
     
+    /** more nonsense */
+    public boolean fixedPrimaryFire = false;
+    public Vector3f primaryFireAngle = new Vector3f(0,0,0);
+    
     /** backwards compatibility attempt */
     public float gunLength = 0;
-    
-    /** activator boolean for IT-1 reloads */
-    public boolean IT1 = false;
     
     
     public boolean setPlayerInvisible = false;
     
     public float maxThrottleInWater = 0.5F;
     public int maxDepth = 3;
+
+	public ArrayList<Vector3f> leftTrackPoints = new ArrayList<Vector3f>();
+	public ArrayList<Vector3f> rightTrackPoints = new ArrayList<Vector3f>();
+	public float trackLinkLength = 0;
+    
+    /** activator boolean for IT-1 reloads */
+    public boolean IT1 = false;
 	
 	public static ArrayList<DriveableType> types = new ArrayList<DriveableType>();
 	
@@ -566,11 +577,14 @@ public class DriveableType extends InfoType
 						Float.valueOf(split[4])));
 			
 			
-			if(split[0].equals("SetPlayerInvisible"))
-				setPlayerInvisible = Boolean.parseBoolean(split[1].toLowerCase());
-		
-			if(split[0].equals("IT1"))
-            			IT1 = Boolean.parseBoolean(split[1].toLowerCase());
+            if(split[0].equals("SetPlayerInvisible"))
+            	setPlayerInvisible = Boolean.parseBoolean(split[1].toLowerCase());
+            if(split[0].equals("IT1"))
+            	IT1 = Boolean.parseBoolean(split[1].toLowerCase());
+            if(split[0].equals("FixedPrimary"))
+            	fixedPrimaryFire = Boolean.parseBoolean(split[1].toLowerCase());
+            if(split[0].equals("PrimaryAngle"))
+            	primaryFireAngle = new Vector3f(Float.parseFloat(split[1]), Float.parseFloat(split[2]), Float.parseFloat(split[3]));
 
 			//Backwards compatibility stuff
 			else if(split[0].equals("AddGun"))
@@ -864,7 +878,64 @@ public class DriveableType extends InfoType
 			{
 				CollisionShapeBox box = new CollisionShapeBox(new Vector3f(split[1], shortName), new Vector3f(split[2], shortName), new Vector3f(split[3], shortName), new Vector3f(split[4], shortName), new Vector3f(split[5], shortName), new Vector3f(split[6], shortName), new Vector3f(split[7], shortName), new Vector3f(split[8], shortName), new Vector3f(split[9], shortName), new Vector3f(split[10], shortName), "core");
 				collisionBox.add(box);
-				colbox = box;
+				//colbox = box;
+			}
+			
+			if(split[0].equals("AddCollisionMeshRaw"))
+			{
+				Vector3f pos = new Vector3f(Float.parseFloat(split[1]),Float.parseFloat(split[2]), Float.parseFloat(split[3]));
+				Vector3f size = new Vector3f(Float.parseFloat(split[4]),Float.parseFloat(split[5]), Float.parseFloat(split[6]));
+				Vector3f p1 = new Vector3f(Float.parseFloat(split[8]),Float.parseFloat(split[9]), Float.parseFloat(split[10]));
+				Vector3f p2 = new Vector3f(Float.parseFloat(split[11]),Float.parseFloat(split[12]), Float.parseFloat(split[13]));
+				Vector3f p3 = new Vector3f(Float.parseFloat(split[14]),Float.parseFloat(split[15]), Float.parseFloat(split[16]));
+				Vector3f p4 = new Vector3f(Float.parseFloat(split[17]),Float.parseFloat(split[18]), Float.parseFloat(split[19]));
+				Vector3f p5 = new Vector3f(Float.parseFloat(split[20]),Float.parseFloat(split[21]), Float.parseFloat(split[22]));
+				Vector3f p6 = new Vector3f(Float.parseFloat(split[23]),Float.parseFloat(split[24]), Float.parseFloat(split[25]));
+				Vector3f p7 = new Vector3f(Float.parseFloat(split[26]),Float.parseFloat(split[27]), Float.parseFloat(split[28]));
+				Vector3f p8 = new Vector3f(Float.parseFloat(split[29]),Float.parseFloat(split[30]), Float.parseFloat(split[31]));				
+				CollisionShapeBox box = new CollisionShapeBox(pos, size, p1, p2, p3, p4, p5, p6, p7, p8, "core");
+				collisionBox.add(box);
+				//colbox = box;
+			}
+			
+			if(split[0].equals("AddTurretCollisionMesh"))
+			{
+				CollisionShapeBox box = new CollisionShapeBox(new Vector3f(split[1], shortName), new Vector3f(split[2], shortName), new Vector3f(split[3], shortName), new Vector3f(split[4], shortName), new Vector3f(split[5], shortName), new Vector3f(split[6], shortName), new Vector3f(split[7], shortName), new Vector3f(split[8], shortName), new Vector3f(split[9], shortName), new Vector3f(split[10], shortName), "turret");
+				collisionBox.add(box);
+				//colbox = box;
+			}
+			
+			if(split[0].equals("AddTurretCollisionMeshRaw"))
+			{
+				Vector3f pos = new Vector3f(Float.parseFloat(split[1]),Float.parseFloat(split[2]), Float.parseFloat(split[3]));
+				Vector3f size = new Vector3f(Float.parseFloat(split[4]),Float.parseFloat(split[5]), Float.parseFloat(split[6]));
+				Vector3f p1 = new Vector3f(Float.parseFloat(split[8]),Float.parseFloat(split[9]), Float.parseFloat(split[10]));
+				Vector3f p2 = new Vector3f(Float.parseFloat(split[11]),Float.parseFloat(split[12]), Float.parseFloat(split[13]));
+				Vector3f p3 = new Vector3f(Float.parseFloat(split[14]),Float.parseFloat(split[15]), Float.parseFloat(split[16]));
+				Vector3f p4 = new Vector3f(Float.parseFloat(split[17]),Float.parseFloat(split[18]), Float.parseFloat(split[19]));
+				Vector3f p5 = new Vector3f(Float.parseFloat(split[20]),Float.parseFloat(split[21]), Float.parseFloat(split[22]));
+				Vector3f p6 = new Vector3f(Float.parseFloat(split[23]),Float.parseFloat(split[24]), Float.parseFloat(split[25]));
+				Vector3f p7 = new Vector3f(Float.parseFloat(split[26]),Float.parseFloat(split[27]), Float.parseFloat(split[28]));
+				Vector3f p8 = new Vector3f(Float.parseFloat(split[29]),Float.parseFloat(split[30]), Float.parseFloat(split[31]));				
+				CollisionShapeBox box = new CollisionShapeBox(pos, size, p1, p2, p3, p4, p5, p6, p7, p8, "turret");
+				collisionBox.add(box);
+				//colbox = box;
+			}
+
+			
+			if(split[0].equals("LeftLinkPoint"))
+			{
+				leftTrackPoints.add(new Vector3f(split[1], shortName));
+			}
+			
+			if(split[0].equals("RightLinkPoint"))
+			{
+				rightTrackPoints.add(new Vector3f(split[1], shortName));
+			}
+			
+			if(split[0].equals("TrackLinkLength"))
+			{
+				trackLinkLength = Float.parseFloat(split[1]);
 			}
 			
 			// ICBM Mod Radar
@@ -890,12 +961,12 @@ public class DriveableType extends InfoType
 				emitter.velocity.scale(1.0f / 16.0f);
 				emitters.add(emitter);
 			}
-
+			
 			// radar (for mapwriter)
 			else if(split[0].equals("RadarDetectableAltitude"))
-				radarDetectableAltitude = Integer.parseInt(split[1]);
+			radarDetectableAltitude = Integer.parseInt(split[1]);
 			else if(split[0].equals("Stealth"))
-				stealth = split[1].equals("True");
+			stealth = split[1].equals("True");
 		}
 		catch (Exception e)
 		{

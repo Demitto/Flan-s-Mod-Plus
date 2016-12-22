@@ -4,6 +4,8 @@ import io.netty.buffer.ByteBuf;
 
 import java.util.ArrayList;
 
+import org.lwjgl.opengl.GL11;
+
 import mapwriter.forge.MwForge;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
@@ -11,6 +13,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Items;
@@ -25,6 +28,7 @@ import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.MovingObjectPosition.MovingObjectType;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
+import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
 import cofh.api.energy.IEnergyContainerItem;
 
 import com.flansmod.api.IControllable;
@@ -63,6 +67,8 @@ import com.flansmod.common.tools.ItemTool;
 import com.flansmod.common.types.InfoType;
 import com.flansmod.common.vector.Vector3f;
 
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.TickEvent.PlayerTickEvent;
 import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.registry.IEntityAdditionalSpawnData;
 import cpw.mods.fml.relauncher.Side;
@@ -146,7 +152,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 
 	public boolean locked;
 	public boolean neverLocked = true;
-	private String key;
+	public String key = "ChangeMe";
 	private String lastKey;
 	
 	//Gun recoil
@@ -195,6 +201,9 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	public boolean toDeactivate = false;
 	public int timeTillDeactivate = 0;
 	
+	//
+	public boolean canFire = true;
+	
 	
 	@SideOnly(Side.CLIENT)
 	public EntityLivingBase camera;
@@ -204,6 +213,8 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	private ItemStack[][] prevInventoryItems = new ItemStack[][]{ null, null };
 
 	public Entity lastAtkEntity = null;
+	
+	//public ArrayList<EntityPlayer> playerIDs = new ArrayList<EntityPlayer>();
 
     public EntityDriveable(World world)
     {
@@ -215,7 +226,6 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
         yOffset = 6F / 16F;
 		ignoreFrustumCheck = true;
 		renderDistanceWeight = 200D;
-		key = "ChangeMe";
 		locked = false;
     }
 
@@ -224,7 +234,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	{
 		this(world);
 		driveableType = t.shortName;
-		driveableData = d;
+		driveableData = d;	
 	}
 
 	protected void initType(DriveableType type, boolean clientSide)
@@ -294,6 +304,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		tag.setFloat("RotationYaw", axes.getYaw());
 		tag.setFloat("RotationPitch", axes.getPitch());
 		tag.setFloat("RotationRoll", axes.getRoll());
+		if(key != null)
 		tag.setString("key", key);
 		tag.setBoolean("locked", locked);
     }
@@ -309,6 +320,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		prevRotationPitch = tag.getFloat("RotationPitch");
 		prevRotationRoll = tag.getFloat("RotationRoll");
 		locked = tag.getBoolean("locked");
+		key = tag.getString("key");
 		axes = new RotatedAxes(prevRotationYaw, prevRotationPitch, prevRotationRoll);
     }
 
@@ -332,6 +344,8 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
     		data.writeShort((short)part.health);
     		data.writeBoolean(part.onFire);
     	}
+		if(key != null)
+		ByteBufUtils.writeUTF8String(data, key);
 	}
 
 	@Override
@@ -355,6 +369,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
         		part.health = data.readShort();
         		part.onFire = data.readBoolean();
         	}
+			key = ByteBufUtils.readUTF8String(data);
 
 		}
 		catch(Exception e)
@@ -505,14 +520,14 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	@Override
     public boolean canBeCollidedWith()
     {
-        return !isDead;
+        return true;
     }
 
     @Override
     public void applyEntityCollision(Entity entity)
     {
-    	if(!isPartOfThis(entity))
-    		super.applyEntityCollision(entity);
+    	//if(!isPartOfThis(entity))
+    		//super.applyEntityCollision(entity);
     }
 
 	@Override
@@ -645,10 +660,12 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	public void shoot(boolean secondary)
 	{
 		DriveableType type = getDriveableType();
-		if(seats[0] == null && !(seats[0].riddenByEntity instanceof EntityLivingBase))
+		if(seats[0] == null)
 			return;
 		
 		if(type.IT1 && !canFireIT1 && type.weaponType(secondary) == EnumWeaponType.MISSILE) return;
+		
+		if(!canFire) return;
 		
 		//Check shoot delay
 		if(getShootDelay(secondary) <= 0)
@@ -717,6 +734,16 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		//Rotate the gun vector to global axes
 		Vector3f gunVec = getFiringPosition(shootPoint);
 		Vector3f lookVector = getLookVector(shootPoint);
+		
+		if(!secondary && type.fixedPrimaryFire){
+			lookVector = axes.findLocalVectorGlobally(type.primaryFireAngle);
+			if(shootPoint.rootPos.part == EnumDriveablePart.turret){
+				lookVector = getPositionOnTurret(type.primaryFireAngle, false);
+			}
+			if(shootPoint.rootPos.part == EnumDriveablePart.barrel){
+				lookVector = getPositionOnTurret(type.primaryFireAngle, true);
+			}
+		}
 		
 		if(weaponType == EnumWeaponType.SHELL)
 			isRecoil = true;
@@ -867,10 +894,9 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 						//float shellSpeed = 3F;
 						float spread = type.bulletSpread;
 						float shellSpeed = type.bulletSpeed;
-
 						ItemStack bulletStack = driveableData.getStackInSlot(slot);
 						ItemBullet bulletItem = (ItemBullet)bulletStack.getItem();
-						EntityShootable bulletEntity = bulletItem.getEntity(worldObj, Vector3f.add(gunVec, new Vector3f(posX, posY, posZ), null), lookVector, (EntityLivingBase)seats[0].riddenByEntity, spread, damageMultiplier, shellSpeed, driveableData.getStackInSlot(slot).getItemDamage(), type);
+						EntityShootable bulletEntity = bulletItem.getEntity(worldObj, Vector3f.add(gunVec, new Vector3f(posX, posY, posZ), null), lookVector, (EntityLivingBase)seats[0].riddenByEntity , spread, damageMultiplier, shellSpeed, driveableData.getStackInSlot(slot).getItemDamage(), type);
 						//EntityShootable bulletEntity = bulletItem.getEntity(worldObj, Vector3f.add(gunVec, new Vector3f((float)posX, (float)posY, (float)posZ), null), lookVector, (EntityLivingBase)seats[0].riddenByEntity, spread, damageMultiplier, shellSpeed, bulletStack.getItemDamage(), type);
 						//EntityShootable bulletEntity = bulletItem.getEntity(worldObj, Vector3f.add(new Vector3f(posX, posY, posZ), gunVec, null), lookVector, (EntityLivingBase)seats[0].riddenByEntity, spread, damageMultiplier, shellSpeed, driveableData.getStackInSlot(slot).getItemDamage(), type);
 						worldObj.spawnEntityInWorld(bulletEntity); //SHELL
@@ -1046,13 +1072,14 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
     public void onUpdate()
     {
         super.onUpdate();
-
+        //playerIDs.clear();
         DriveableType type = getDriveableType();
         DriveableData data = getDriveableData();
         //if(type.fancyCollision)
         //checkCollsionBox();
 		hugeBoat = (getDriveableType().floatOnWater && getDriveableType().wheelStepHeight == 0);
         //hugeBoat = true;
+		/**
 		if(hugeBoat){
 		for(int i = 0; i < worldObj.loadedEntityList.size(); i++)
 		{
@@ -1073,6 +1100,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			}
 		}
 		}
+		*/
 		
 		if(deckCheck != prevDeckCheck)
 			onDeck = true;
@@ -1167,12 +1195,9 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 					for (Object obj : worldObj.loadedEntityList)
 					{
 						Entity entity = (Entity) obj;
-						String etype = entity.getEntityData().getString("EntityType");
 						if( (type.lockOnToMechas   && entity instanceof EntityMecha)   ||
 							(type.lockOnToVehicles && entity instanceof EntityVehicle) ||
-							(type.lockOnToVehicles && etype.equals("Vehicle"))		   || // for vehicle of other Mod
 							(type.lockOnToPlanes   && entity instanceof EntityPlane)   ||
-							(type.lockOnToPlanes   && etype.equals("Plane"))		   || // for plane of other Mod
 							(type.lockOnToPlayers  && entity instanceof EntityPlayer)  ||
 							(type.lockOnToLivings  && entity instanceof EntityLivingBase))
 						{
@@ -1438,7 +1463,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		//If there's no player in the driveable or it cannot thrust, slow the plane and turn off mouse held actions
 		if((seats[0] != null && seats[0].riddenByEntity == null) || !canThrust && getDriveableType().maxThrottle != 0 && getDriveableType().maxNegativeThrottle != 0)
 		{
-			throttle *= 0.99F;
+			//throttle *= 0.99F;
 		}
 		if(seats[0] != null && seats[0].riddenByEntity == null)
 		{
@@ -1995,8 +2020,10 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	//Collision mechanism mkII
 	public void moveRiders(Entity rider)
 	{
+		if(isPartOfThis(rider)) return;
 		boolean isHuman = false;
 		boolean isDriveable = false;
+		if(!(rider instanceof EntityPlayer)) return;
 		Vector3f riderPos = new Vector3f (rider.posX, rider.posY, rider.posZ);
 		Vector3f riderMotion = new Vector3f(rider.motionX, rider.motionY, rider.motionY);
 		Vector3f vehicleMotion = new Vector3f(posX - lastPos.x, posY - lastPos.y, posZ - lastPos.z);
@@ -2011,7 +2038,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		Vector3f rotatedPosVector = axes.findGlobalVectorLocally(relativePos);
 		Vector3f rotatedMotionVector = axes.findGlobalVectorLocally(riderMotion);
 		
-		Vector3f ellipsoid = new Vector3f(rider.width, rider.height, rider.width);
+		Vector3f ellipsoid = new Vector3f(rider.width/2, rider.height, rider.width/2);
 		
 		CollisionTest test = new CollisionTest(ellipsoid, new Vector3f(relativePos.x, relativePos.y, relativePos.z), riderMotion);
 		test.collisionRecursiveDepth = 0;
@@ -2020,13 +2047,14 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		Vector3f eSpaceVelocity = test.velocity;
 		
 		//Vector3f finalPos = collideWithDriveable(test, eSpacePosition, eSpaceVelocity);
-		
+		DriveableType type = getDriveableType();
 		//Check parts for collision
-		if(getDriveableType().fancyCollision)
+		if(type.fancyCollision)
 		{
-			for(int i = 0; 1 < getDriveableType().collisionBox.size(); i++)
+			//checkCollision(test, getDriveableType().colbox);
+			for(CollisionShapeBox sbox: type.collisionBox)
 			{
-				checkCollision(test, getDriveableType().collisionBox.get(i));
+				checkCollision(test, sbox);
 			}
 		} else {
 			for(DriveablePart ppart : getDriveableData().parts.values())
@@ -2037,46 +2065,44 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		
 		if(test.didCollide){
 		Vector3f finalPos = collideWithDriveable(test, eSpacePosition, eSpaceVelocity);
-				
+		if(rider instanceof EntityAnimal) return;
 		Vector3f velocity = Vector3f.sub(finalPos, test.basePoint, null);
 		test.ConvertESpaceToR3(velocity);
 		finalPos = new Vector3f(finalPos.x * test.eRad.x, finalPos.y * test.eRad.y, finalPos.z * test.eRad.z);
 		Vector3f diff = Vector3f.sub(finalPos, vehiclePos, null);
 		
 		
-		if(rider.onGround && (riderPos.y + finalPos.y/48) < riderPos.y)
+		if(rider.onGround && (posY + finalPos.y + 10/16F) < riderPos.y)
 		{
-			finalPos = new Vector3f(finalPos.x, 0, finalPos.z);
+			//finalPos = new Vector3f(finalPos.x, 0, finalPos.z);
 		}
-		boolean onTop = (rider.posY + 0.65 > test.intersectionPoint.y);
+		//boolean onTop = (rider.posY + 0.65 > test.intersectionPoint.y);
 		
 		boolean stationary = (throttle == 0);
 		
 		//If finalPos returns null, do something about it. Probably not the best way to handle this.
 		if(finalPos == null) finalPos = new Vector3f(0,0,0);
-		
+		test.ConvertESpaceToR3(finalPos);
+		boolean onTop = (test.collisionPlaneNormal.y >= 0.5F);
 		if(!hugeBoat)
-		rider.setPosition((!test.isOnTop)?riderPos.x + finalPos.x/(48*Math.abs(relativePos.x)): riderPos.x, rider.posY +((test.isOnTop)?Math.sqrt((finalPos.y/48)*(finalPos.y/48)):0),(!test.isOnTop)?riderPos.z + finalPos.z/(48*Math.abs(relativePos.z)): riderPos.z);
-		//rider.motionX += velocity.x;
-		rider.motionY = (velocity.y >= 0 && velocity.y <= 0.5)?0 : 0;
-		//rider.motionZ += velocity.z;
-		
-		
-		Vector3f intersect2 = new Vector3f(test.ConvertESpaceToR3(test.intersectionPoint));
+		rider.setPosition((!onTop)?riderPos.x + finalPos.x/(48*Math.abs(relativePos.x)): riderPos.x,(onTop)?posY + finalPos.y + 10/16F:riderPos.y,(!onTop)?riderPos.z + finalPos.z/(48*Math.abs(relativePos.z)): riderPos.z);
+		//test.ConvertESpaceToR3(test.intersectionPoint);
+		//FlansMod.proxy.spawnParticle("flame", test.intersectionPoint.x + posX, test.intersectionPoint.y + posY - 1, test.intersectionPoint.z + posZ, 0, 0, 0);
 		
 		if(hugeBoat && !stationary){
-			rider.setPosition(riderPos.x, rider.posY ,riderPos.z);
+			rider.setPosition(riderPos.x, posY + finalPos.y + 10/16F,riderPos.z);
 		} else if (hugeBoat && stationary) {
-			rider.setPosition(riderPos.x, rider.posY + Math.sqrt((finalPos.y/48)*(finalPos.y/48)),riderPos.z);	
+			rider.setPosition(riderPos.x, posY + finalPos.y + 10/16F,riderPos.z);	
 		}
+		finalPos = Vector3f.sub(finalPos, riderPos, null);
+		finalPos.normalise();
 
+		//rider.motionX = rider.motionX * finalPos.x;
+		rider.motionY = 0;
+		//rider.motionZ = rider.motionZ * finalPos.z;
 		
-		rider.onGround = true;
-		rider.isAirBorne = false;
-		rider.fallDistance = 0;
-		//rider.isCollidedVertically = true;
 		
-		Vector3f intersect = test.intersectionPoint;
+		//Vector3f intersect = test.intersectionPoint;
 		//worldObj.spawnParticle((test.isOnTop)?"fireworksSpark":"explode", posX + intersect.x, posY + intersect.y, posZ + intersect.z, 0,1,0);
 		//worldObj.spawnParticle((test.isOnTop)?"fireworksSpark":"explode", posX, posY, posZ, 0,1,0);
 		//worldObj.spawnParticle((test.isOnTop)?"fireworksSpark":"explode", riderPos.x, riderPos.y, riderPos.z, 0,1,0);
@@ -2113,6 +2139,8 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 						canDamage = false;
 				}
 				
+				
+				
 				if(canDamage){
 					if(rider instanceof EntityLiving){
 						rider.attackEntityFrom(DamageSource.generic, throttle*getDriveableType().collisionDamageTimes);
@@ -2121,6 +2149,13 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 					}
 				}
 			}
+		}
+		if(rider instanceof EntityPlayer){
+			EntityPlayer player = (EntityPlayer)rider;
+			//playerIDs.add(player);
+			player.onGround = true;
+			player.isAirBorne = false;
+			player.fallDistance = 0;
 		}
 		
 		}
@@ -2136,11 +2171,25 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		
 		
 	}
-	
+	/**
+	@SubscribeEvent
+	public void updateRiders(LivingUpdateEvent event){
+		
+		for(EntityPlayer player: playerIDs){
+			Entity p = (Entity)player;
+			if(p == event.entity){
+				player.onGround = true;
+				player.isAirBorne = false;
+				player.fallDistance = 0;
+				playerIDs.remove(player);
+			}
+		}
+	}
+	 */
 	public void checkCollision(CollisionTest tester, CollisionShapeBox box)
 	{
 		{		
-			double distance = 10;
+			double distance = tester.nearestDistance;
 			Vector3f collisionPoint = new Vector3f(0,0,0);
 			int surface = 0;
 			
@@ -2151,16 +2200,18 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			float f4 = box.pos.x + box.size.x;
 			float f5 = -box.pos.y + box.size.y;
 			float f6 = box.pos.z + box.size.z;
-
+			
+			box.pos = new Vector3f(box.pos.x, box.pos.y, box.pos.z);
+			//if(EnumDriveablePart.getPart(box.part) == EnumDriveablePart.turret) return;
 			//Define box verticies, where z > 0 is right. See shapeboxes in the toolbox for a visual reference
-			Vector3f p1 = shift.findLocalVectorGlobally(new Vector3f(box.pos.x + box.size.x + box.p1.x, box.pos.y + box.size.y + box.p1.y, box.pos.z - box.p1.z)); //Front upper left
-			Vector3f p2 = shift.findLocalVectorGlobally(new Vector3f(box.pos.x + box.size.x + box.p2.x, box.pos.y + box.size.y + box.p2.y, box.pos.z + box.size.z + box.p2.z)); //Front upper right
-			Vector3f p3 = shift.findLocalVectorGlobally(new Vector3f(box.pos.x - box.p3.x, box.pos.y + box.size.y + box.p3.y, box.pos.z + box.size.z + box.p3.z)); //Rear upper right
-			Vector3f p4 = shift.findLocalVectorGlobally(new Vector3f(box.pos.x - box.p4.x, box.pos.y + box.size.y + box.p4.y, box.pos.z - box.p4.z)); //Rear upper left
-			Vector3f p5 = shift.findLocalVectorGlobally(new Vector3f(box.pos.x + box.size.x + box.p5.x, box.pos.y - box.p5.y, box.pos.z - box.p5.z)); //Front lower left
-			Vector3f p6 = shift.findLocalVectorGlobally(new Vector3f(box.pos.x + box.size.x + box.p6.x, box.pos.y - box.p6.y, box.pos.z + box.size.z + box.p6.z)); //Front lower right
-			Vector3f p7 = shift.findLocalVectorGlobally(new Vector3f(box.pos.x - box.p7.x, box.pos.y - box.p7.y, box.pos.z + box.size.z + box.p7.z)); //Rear lower right
-			Vector3f p8 = shift.findLocalVectorGlobally(new Vector3f(box.pos.x - box.p8.x, box.pos.y - box.p8.y, box.pos.z - box.p8.z)); //Rear lower left
+			Vector3f p1 = new Vector3f(box.pos.x - box.p1.x, box.pos.y + box.size.y + box.p1.y - box.size.y + 0.625F, box.pos.z - box.p1.z);
+			Vector3f p2 = new Vector3f(box.pos.x + box.size.x + box.p2.x,box.pos.y + box.size.y + box.p2.y - box.size.y + 0.625F, box.pos.z - box.p2.z);
+			Vector3f p3 = new Vector3f(box.pos.x + box.size.x + box.p3.x, box.pos.y + box.size.y + box.p3.y - box.size.y + 0.625F, box.pos.z + box.size.z + box.p3.z);
+			Vector3f p4 = new Vector3f(box.pos.x - box.p4.x, box.pos.y + box.size.y + box.p4.y - box.size.y + 0.625F, box.pos.z + box.size.z + box.p4.z);
+			Vector3f p5 = new Vector3f(box.pos.x - box.p5.x, box.pos.y - box.p5.y - box.size.y + 0.625F, box.pos.z - box.p5.z);
+			Vector3f p6 = new Vector3f(box.pos.x + box.size.x + box.p6.x, box.pos.y - box.p6.y - box.size.y + 0.625F, box.pos.z - box.p6.z);
+			Vector3f p7 = new Vector3f(box.pos.x + box.size.x + box.p7.x, box.pos.y - box.p7.y - box.size.y + 0.625F, box.pos.z + box.size.z + box.p7.z);
+			Vector3f p8 = new Vector3f(box.pos.x - box.p8.x, box.pos.y - box.p8.y - box.size.y + 0.625F, box.pos.z + box.size.z + box.p8.z);
 			
 			if(EnumDriveablePart.getPart(box.part) == EnumDriveablePart.turret && seats[0] != null)
 			{
@@ -2172,6 +2223,15 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				p6 = getPositionOnTurret(p6, false); //Front lower right
 				p7 = getPositionOnTurret(p7, false); //Rear lower right
 				p8 = getPositionOnTurret(p8, false); //Rear lower left
+			} else {
+				p1 = shift.findLocalVectorGlobally(p1);
+				p2 = shift.findLocalVectorGlobally(p2);
+				p3 = shift.findLocalVectorGlobally(p3);
+				p4 = shift.findLocalVectorGlobally(p4);
+				p5 = shift.findLocalVectorGlobally(p5);
+				p6 = shift.findLocalVectorGlobally(p6);
+				p7 = shift.findLocalVectorGlobally(p7);
+				p8 = shift.findLocalVectorGlobally(p8);
 			}
 			
 			
@@ -2199,9 +2259,8 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				topFaceDist = tester.nearestDistance;
 			}
 			
-			
 			//Check front face
-			tester.checkTriangle(tester, p1, p2, p6);
+			tester.checkTriangle(tester, p6, p7, p3);
 			if(tester.didCollide && tester.nearestDistance < distance)
 			{
 				distance = tester.nearestDistance;
@@ -2209,7 +2268,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				surface = 2;
 				tester.part = EnumDriveablePart.getPart(box.part);
 			}
-			tester.checkTriangle(tester, p1, p6, p5);
+			tester.checkTriangle(tester, p3, p2, p6);
 			if(tester.didCollide && tester.nearestDistance < distance)
 			{
 				distance = tester.nearestDistance;
@@ -2217,9 +2276,10 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				surface = 2;
 				tester.part = EnumDriveablePart.getPart(box.part);
 			}
+			
 			
 			//Check rear face
-			tester.checkTriangle(tester, p3, p4, p8);
+			tester.checkTriangle(tester, p4, p1, p5);
 			if(tester.didCollide && tester.nearestDistance < distance)
 			{
 				distance = tester.nearestDistance;
@@ -2227,7 +2287,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				surface = 3;
 				tester.part = EnumDriveablePart.getPart(box.part);
 			}
-			tester.checkTriangle(tester, p4, p8, p7);
+			tester.checkTriangle(tester, p5, p8, p4);
 			if(tester.didCollide && tester.nearestDistance < distance)
 			{
 				distance = tester.nearestDistance;
@@ -2237,7 +2297,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			}
 			
 			//Check Left Face
-			tester.checkTriangle(tester, p4, p1, p5);
+			tester.checkTriangle(tester, p6, p5, p1);
 			if(tester.didCollide && tester.nearestDistance < distance)
 			{
 				distance = tester.nearestDistance;
@@ -2245,7 +2305,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				surface = 4;
 				tester.part = EnumDriveablePart.getPart(box.part);
 			}
-			tester.checkTriangle(tester, p1, p5, p8);
+			tester.checkTriangle(tester, p1, p2, p6);
 			if(tester.didCollide && tester.nearestDistance < distance)
 			{
 				distance = tester.nearestDistance;
@@ -2255,7 +2315,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			}
 			
 			//Check right face
-			tester.checkTriangle(tester, p2, p3, p7);
+			tester.checkTriangle(tester, p8, p7, p3);
 			if(tester.didCollide && tester.nearestDistance < distance)
 			{
 				distance = tester.nearestDistance;
@@ -2263,13 +2323,35 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				surface = 5;
 				tester.part = EnumDriveablePart.getPart(box.part);
 			}
-			tester.checkTriangle(tester, p3, p7, p6);
+			tester.checkTriangle(tester, p3, p4, p8);
 			if(tester.didCollide && tester.nearestDistance < distance)
 			{
 				distance = tester.nearestDistance;
 				collisionPoint = tester.intersectionPoint;
 				surface = 5;
 				tester.part = EnumDriveablePart.getPart(box.part);
+			}
+
+			//Check bottom face
+			tester.checkTriangle(tester, p5, p6, p7);
+			if(tester.didCollide && tester.nearestDistance < distance)
+			{
+				collisionPoint = tester.intersectionPoint;
+				surface = 1;
+				tester.part = EnumDriveablePart.getPart(box.part);
+			}
+				
+			tester.checkTriangle(tester, p8, p7, p5);
+			if(tester.didCollide && tester.nearestDistance < distance)
+			{
+				collisionPoint = tester.intersectionPoint;
+				surface = 1;
+				tester.part = EnumDriveablePart.getPart(box.part);
+			}
+			
+			if(tester.didCollide){
+				tester.isOnTop = true;
+				topFaceDist = tester.nearestDistance;
 			}
 			
 			Vector3f.add(p1, pos, p1);
@@ -2284,7 +2366,8 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			boolean muff = true;
 			String wank = "crit";
 			
-	
+			
+			/**
 			FlansMod.proxy.spawnParticle(wank, p1.x,p1.y,p1.z, 0,0,0);
 			FlansMod.proxy.spawnParticle(wank, p2.x,p2.y,p2.z, 0,0,0);
 			FlansMod.proxy.spawnParticle(wank, p3.x,p3.y,p3.z, 0,0,0);
@@ -2293,12 +2376,43 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			FlansMod.proxy.spawnParticle(wank, p6.x,p6.y,p6.z, 0,0,0);
 			FlansMod.proxy.spawnParticle(wank, p7.x,p7.y,p7.z, 0,0,0);
 			FlansMod.proxy.spawnParticle(wank, p8.x,p8.y,p8.z, 0,0,0);
-			
+			*/
+			//renderTri(p1,p2,p3);
+			//renderTri(p3,p4,p1);
 			if(tester.nearestDistance < topFaceDist) tester.isOnTop = false;
+			
 			
 			if(surface == 1) tester.isOnTop = true;
 		}
 
+	}
+	
+	public void renderTri(Vector3f p1, Vector3f p2, Vector3f p3)
+	{
+		Vector3f pos = new Vector3f (posX, posY, posZ);
+		Vector3f p1a = Vector3f.add(p1, pos, null);
+		Vector3f p2a = Vector3f.add(p2, pos, null);
+		Vector3f p3a = Vector3f.add(p3, pos, null);
+
+		renderLine(p1a,p2a);
+		renderLine(p2a,p3a);
+		renderLine(p3a,p1a);
+	}
+	
+	public void renderLine(Vector3f in, Vector3f out)
+	{
+		float dx = out.x - in.x;
+		float dy = out.y - in.y;
+		float dz = out.z - in.z;
+		Vector3f diff = Vector3f.sub(out, in, null);
+		diff.normalise();
+		float distance = (float)Math.sqrt((dx * dx) + (dy * dy) + (dz * dz));
+		for(int i = 0; i < 10; i++)
+		{
+			float dist2 = (distance/10) * i;
+			Vector3f newVec = new Vector3f(in.x + (dist2*diff.x),in.y + (dist2*diff.y), in.z + (dist2*diff.z));
+			FlansMod.proxy.spawnParticle("reddust", newVec.x, newVec.y, newVec.z, 0, 0, 0);
+		}
 	}
 	
 
@@ -2314,9 +2428,10 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		
 		if(getDriveableType().fancyCollision)
 		{
-			for(int i = 0; 1 < getDriveableType().collisionBox.size(); i++)
+			//checkCollision(tester, getDriveableType().colbox);
+			for(CollisionShapeBox sbox: getDriveableType().collisionBox)
 			{
-				checkCollision(tester, getDriveableType().collisionBox.get(i));
+				checkCollision(tester, sbox);
 			}
 		} else {
 			for(DriveablePart ppart : getDriveableData().parts.values())
@@ -2350,9 +2465,12 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		
 		//Determine the sliding plane
 		Vector3f slidePlaneOrigin = tester.intersectionPoint;
+		if(tester.intersectionPoint == null) return Vector3f.add(Pos, vel, null);
 		Vector3f slidePlaneNormal = Vector3f.sub(newBasePoint, tester.intersectionPoint, null);
 		slidePlaneNormal.normalise();
-		
+		FlansMod.proxy.spawnParticle("flame", slidePlaneOrigin.x + posX, slidePlaneOrigin.y + posY, slidePlaneOrigin.z + posZ, 0, 0, 0);
+
+		tester.collisionPlaneNormal = slidePlaneNormal;
 		CollisionPlane plane = new CollisionPlane(slidePlaneOrigin, slidePlaneNormal);
 		
 		double sDV = plane.signedDistanceTo(destinationPoint);
@@ -2428,11 +2546,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			rider.motionY = diff.y;
 			rider.motionZ = diff.z;	
 		}
-		
-		rider.onGround = true;
-		rider.isAirBorne = false;
-		rider.fallDistance = 0;
-		//rider.isCollidedVertically = true;
+
 		}
 		
 	}
@@ -2778,6 +2892,8 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		}else if(tool == key){
 		locked = true;
 		player.addChatMessage(new ChatComponentText("Locked"));
+		} else {
+		player.addChatMessage(new ChatComponentText(key));			
 		}
 	}
 	
@@ -2966,6 +3082,8 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		} else if(tool == key){
 		locked = false;
 		player.addChatMessage(new ChatComponentText("Unlocked"));
+		} else {
+			player.addChatMessage(new ChatComponentText(key));			
 		}
 	}
 

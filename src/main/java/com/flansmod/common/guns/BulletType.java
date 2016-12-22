@@ -89,6 +89,17 @@ public class BulletType extends ShootableType
 	/** The radius for smoke effects to take place in */
 	public float smokeRadius = 5F;
 	public boolean TVguide = true;
+	
+	//Other stuff
+	public boolean VLS = false;
+	public int VLSTime = 0;
+	public boolean fixedDirection = false;
+	public float turnRadius = 3;
+	public String boostPhaseParticle;
+	public float trackPhaseSpeed = 2;
+	public float trackPhaseTurn = 0.2F;
+	
+	public boolean torpedo = false;
 
 	/** The static bullets list */
 	public static List<BulletType> bullets = new ArrayList<BulletType>();
@@ -165,7 +176,23 @@ public class BulletType extends ShootableType
 				smokeEffects.add(getPotionEffect(split));
 			else if(split[0].equals("SmokeRadius"))
 				smokeRadius = Float.parseFloat(split[1]);
-
+			else if(split[0].equals("VLS") || split[0].equals("HasDeadZone"))
+				VLS = Boolean.parseBoolean(split[1]);
+			else if(split[0].equals("VLSTime") || split[0].equals("DeadZoneTime"))
+				VLSTime = Integer.parseInt(split[1]);
+			else if(split[0].equals("FixedTrackDirection"))
+				fixedDirection = Boolean.parseBoolean(split[1]);
+			else if(split[0].equals("GuidedTurnRadius"))
+				turnRadius = Float.parseFloat(split[1]);
+			else if(split[0].equals("GuidedPhaseSpeed"))
+				trackPhaseSpeed = Float.parseFloat(split[1]);
+			else if(split[0].equals("GuidedPhaseTurnSpeed"))
+				trackPhaseTurn = Float.parseFloat(split[1]);
+			else if(split[0].equals("BoostParticle"))
+				boostPhaseParticle = split[1];
+			else if(split[0].equals("Torpedo"))
+				torpedo = Boolean.parseBoolean(split[1]);
+			
 			else if(split[0].equals("Bomb"))
 				weaponType = EnumWeaponType.BOMB;
 			else if(split[0].equals("Shell"))

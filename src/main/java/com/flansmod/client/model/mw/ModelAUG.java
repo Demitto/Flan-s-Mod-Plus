@@ -89,7 +89,22 @@ public class ModelAUG extends ModelGun
 		gripAttachPoint = new Vector3f(0F, 0F, 0F);
 
 		gunSlideDistance = 0F;
-		animationType = EnumAnimationType.PISTOL_CLIP;
+		animationType = EnumAnimationType.ALT_PISTOL_CLIP;
+		
+		hasArms = true;
+		
+		leftArmPos = new Vector3f(0F, -0.2F, 0F);
+		leftArmRot = new Vector3f(90, 45, 0);
+		leftArmReloadPos = new Vector3f(-0.6F, -0.5F, 0F);
+		leftArmReloadRot = new Vector3f(90, 20, 0);
+		
+		rightArmPos = new Vector3f(0.4F, -0.5F, 0F);
+		rightArmRot = new Vector3f(0, 0, -90);
+		rightArmReloadPos = new Vector3f(0.4F, -0.6F, 0F);
+		rightArmReloadRot = new Vector3f(-40, 0, -90);
+
+		rightHandAmmo = false;
+		leftHandAmmo = true;
 
 
 		translateAll(1F, 0F, 0F);
