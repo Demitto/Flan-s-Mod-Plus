@@ -12,6 +12,7 @@ import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -41,6 +42,7 @@ import com.flansmod.common.driveables.collisions.CollisionTest;
 import com.flansmod.common.driveables.collisions.RidingEntityPosition;
 import com.flansmod.common.driveables.mechas.EntityMecha;
 import com.flansmod.common.guns.EntityBullet;
+import com.flansmod.common.guns.EntityDamageSourceGun;
 import com.flansmod.common.guns.EntityShootable;
 import com.flansmod.common.guns.EnumFireMode;
 import com.flansmod.common.guns.GunType;
@@ -58,6 +60,7 @@ import com.flansmod.common.parts.ItemPart;
 import com.flansmod.common.parts.PartType;
 import com.flansmod.common.teams.TeamsManager;
 import com.flansmod.common.tools.ItemTool;
+import com.flansmod.common.types.InfoType;
 import com.flansmod.common.vector.Vector3f;
 
 import cpw.mods.fml.common.network.ByteBufUtils;
@@ -160,6 +163,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	public int prevDeckCheck = 0;
 	
 	public boolean isMecha = false;
+	public boolean disabled = false;
 	
 	/** The angle of the propeller for the renderer */
 	public float propAngle = 0;
@@ -172,6 +176,24 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
     public int flareDelay = 0;
     public int ticksFlareUsing = 0;
 	public boolean varFlare;
+	
+	//IT1 stuff
+	public float drakonDoorAngle = 0;
+	public float drakonArmAngle = 0;
+	public float drakonRailAngle = 0;
+	
+	public float prevDrakonDoorAngle = 0;
+	public float prevDrakonArmAngle = 0;
+	public float prevDrakonRailAngle = 0;
+	
+	public boolean reloadingDrakon = false;
+	public boolean canFireIT1 = true;
+	
+	public int stage = 1;
+	public int reloadAnimTime = 0;
+	
+	public boolean toDeactivate = false;
+	public int timeTillDeactivate = 0;
 	
 	
 	@SideOnly(Side.CLIENT)
@@ -528,6 +550,17 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	        serverPitch = f1;
 		}
     }
+	
+	public void setIT1(boolean canFire, boolean reloading, int stag, int stageTime)
+	{	
+		if(worldObj.isRemote && ticksExisted % 5 == 0)
+		{
+			canFireIT1 = canFire;
+			reloadingDrakon = reloading;
+			stage = stag;
+			reloadAnimTime = stageTime;
+		}
+	}
 
 	public void setPositionRotationAndMotion(double x, double y, double z, float yaw, float pitch, float roll, double motX, double motY, double motZ, float velYaw, float velPitch, float velRoll, float throt, float steeringYaw)
 	{
@@ -602,7 +635,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		}
 		switch(key)
 		{
-		case 9 : leftMouseHeld = held; 
+		case 9 : leftMouseHeld = held;
 		break;
 		case 8 : rightMouseHeld = held; break;
 		}
@@ -614,25 +647,28 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		DriveableType type = getDriveableType();
 		if(seats[0] == null && !(seats[0].riddenByEntity instanceof EntityLivingBase))
 			return;
+		
+		if(type.IT1 && !canFireIT1 && type.weaponType(secondary) == EnumWeaponType.MISSILE) return;
+		
 		//Check shoot delay
 		if(getShootDelay(secondary) <= 0)
 		{
-			//We can shoot, so grab the available shoot points and the weaponType
-			ArrayList<ShootPoint> shootPoints = type.shootPoints(secondary);
-			EnumWeaponType weaponType = type.weaponType(secondary);
-			//If there are no shoot points, return
-			if(shootPoints.size() == 0)
-				return;
-			//For alternating guns, move on to the next one
-			int currentGun = getCurrentGun(secondary);
-			if(type.alternate(secondary))
-			{
-				currentGun = (currentGun + 1) % shootPoints.size();
-				setCurrentGun(currentGun, secondary);
-				shootEach(type, shootPoints.get(currentGun), currentGun, secondary, weaponType);
-			}
-			else for(int i = 0; i < shootPoints.size(); i++)
-				shootEach(type, shootPoints.get(i), i, secondary, weaponType);
+				//We can shoot, so grab the available shoot points and the weaponType
+				ArrayList<ShootPoint> shootPoints = type.shootPoints(secondary);
+				EnumWeaponType weaponType = type.weaponType(secondary);
+				//If there are no shoot points, return
+				if(shootPoints.size() == 0)
+					return;
+				//For alternating guns, move on to the next one
+				int currentGun = getCurrentGun(secondary);
+				if(type.alternate(secondary))
+				{
+					currentGun = (currentGun + 1) % shootPoints.size();
+					setCurrentGun(currentGun, secondary);
+					shootEach(type, shootPoints.get(currentGun), currentGun, secondary, weaponType);
+				}
+				else for(int i = 0; i < shootPoints.size(); i++)
+					shootEach(type, shootPoints.get(i), i, secondary, weaponType);
 		}
 	}
 
@@ -684,7 +720,11 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		
 		if(weaponType == EnumWeaponType.SHELL)
 			isRecoil = true;
-
+		
+		if(!isPartIntact(shootPoint.rootPos.part)) return;
+	
+		if(disabled) return;
+		
 		//If its a pilot gun, then it is using a gun type, so do the following
 		if(shootPoint.rootPos instanceof PilotGun)
 		{
@@ -855,6 +895,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 							driveableData.setInventorySlotContents(slot, bulletStack);
 						}
 						setShootDelay(type.shootDelay(secondary), secondary);
+						canFireIT1 = false;
 					}
 				}
 				break;
@@ -1005,14 +1046,13 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
     public void onUpdate()
     {
         super.onUpdate();
-       
 
         DriveableType type = getDriveableType();
         DriveableData data = getDriveableData();
-        if(type.fancyCollision)
+        //if(type.fancyCollision)
         //checkCollsionBox();
 		hugeBoat = (getDriveableType().floatOnWater && getDriveableType().wheelStepHeight == 0);
-        hugeBoat = true;
+        //hugeBoat = true;
 		if(hugeBoat){
 		for(int i = 0; i < worldObj.loadedEntityList.size(); i++)
 		{
@@ -1040,6 +1080,27 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 
         
 		//Aesthetics
+        if(type.IT1 && !disabled)
+        {
+        	boolean fireButtonheld = false;
+        	if(type.weaponType(false) == EnumWeaponType.MISSILE) fireButtonheld = leftMouseHeld;
+        	if(type.weaponType(true) == EnumWeaponType.MISSILE) fireButtonheld = rightMouseHeld;
+
+            prevDrakonDoorAngle = drakonDoorAngle;
+            prevDrakonArmAngle = drakonArmAngle;
+            prevDrakonRailAngle = drakonRailAngle;
+            if(canFireIT1) reloadingDrakon = false;
+	        if(stage == 0) stage = 1;
+	        
+	        if(stage == 8 && fireButtonheld){stage = 1; timeTillDeactivate = 5; toDeactivate = true;}
+	        if(timeTillDeactivate <= 0 && toDeactivate) {canFireIT1 = false; toDeactivate = false;}
+	        
+	        if(reloadAnimTime <= 0)
+	        IT1Reload();
+	        
+	        reloadAnimTime--;
+	        timeTillDeactivate--;
+        }
 		
 		//Aesthetics
 		prevPropAngle = propAngle;
@@ -1053,7 +1114,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		
 		
 		//Gun recoil
-        if(leftMouseHeld){
+        if(leftMouseHeld && !disabled){
     		tryRecoil();
     		setRecoilTimer();
         }
@@ -1073,6 +1134,27 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 
         checkInventoryChanged();
         
+		if(worldObj.isAnyLiquid(this.boundingBox))
+		{
+			if(throttle >= type.maxThrottleInWater)
+			{
+				throttle = type.maxThrottleInWater;
+			}
+			
+			if(throttle <= -type.maxThrottleInWater)
+			{
+				throttle = -type.maxThrottleInWater;
+			}
+			
+			if(worldObj.isAnyLiquid(this.boundingBox.copy().offset(0, type.maxDepth, 0)))
+			{
+				throttle = 0;
+				//this.driveableData.parts.get(EnumDriveablePart.core).health -= 1;
+				disabled = true;
+			}
+		} else disabled = false;
+
+        
 		if(type.lockOnToLivings || type.lockOnToMechas || type.lockOnToPlanes || type.lockOnToPlayers || type.lockOnToVehicles)
 		{
 			if(!worldObj.isRemote && this.seats.length > 0 && lockOnSoundDelay <= 0)
@@ -1085,9 +1167,12 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 					for (Object obj : worldObj.loadedEntityList)
 					{
 						Entity entity = (Entity) obj;
+						String etype = entity.getEntityData().getString("EntityType");
 						if( (type.lockOnToMechas   && entity instanceof EntityMecha)   ||
 							(type.lockOnToVehicles && entity instanceof EntityVehicle) ||
+							(type.lockOnToVehicles && etype.equals("Vehicle"))		   || // for vehicle of other Mod
 							(type.lockOnToPlanes   && entity instanceof EntityPlane)   ||
+							(type.lockOnToPlanes   && etype.equals("Plane"))		   || // for plane of other Mod
 							(type.lockOnToPlayers  && entity instanceof EntityPlayer)  ||
 							(type.lockOnToLivings  && entity instanceof EntityLivingBase))
 						{
@@ -1949,6 +2034,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 				ppart.rayTraceRider(this, test);
 			}
 		}
+		
 		if(test.didCollide){
 		Vector3f finalPos = collideWithDriveable(test, eSpacePosition, eSpaceVelocity);
 				
@@ -1974,6 +2060,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		//rider.motionX += velocity.x;
 		rider.motionY = (velocity.y >= 0 && velocity.y <= 0.5)?0 : 0;
 		//rider.motionZ += velocity.z;
+		
 		
 		Vector3f intersect2 = new Vector3f(test.ConvertESpaceToR3(test.intersectionPoint));
 		
@@ -2004,10 +2091,34 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		{
 			if(throttle > getDriveableType().collisionDamageThrottle)
 			{
-				if(rider instanceof EntityLiving){
-					rider.attackEntityFrom(DamageSource.generic, throttle*getDriveableType().collisionDamageTimes);
-				}else if(rider instanceof EntityPlayer){
-					rider.attackEntityFrom(DamageSource.generic, throttle*getDriveableType().collisionDamageTimes);
+				boolean canDamage = true;
+				if(TeamsManager.getInstance() != null && TeamsManager.getInstance().currentRound != null && rider instanceof EntityPlayerMP && seats[0].riddenByEntity instanceof EntityPlayer)
+				{
+					EntityPlayerMP attacker = (EntityPlayerMP)seats[0].riddenByEntity;
+					EntityPlayerMP player = (EntityPlayerMP)rider;
+					if(TeamsManager.getInstance().currentRound.gametype.getPlayerData(attacker) != null && TeamsManager.getInstance().currentRound.gametype.getPlayerData(attacker).team != null)
+					{
+						if(TeamsManager.getInstance().currentRound.gametype.getPlayerData(player) != null && TeamsManager.getInstance().currentRound.gametype.getPlayerData(player).team != null)
+						{
+							if(TeamsManager.getInstance().currentRound.gametype.getPlayerData(player).team == TeamsManager.getInstance().currentRound.gametype.getPlayerData(attacker).team)
+							{
+								canDamage = false;
+							}
+						}
+					}
+				}
+				for(EntitySeat seat : seats)
+				{
+					if(rider == seat.lastRiddenByEntity)
+						canDamage = false;
+				}
+				
+				if(canDamage){
+					if(rider instanceof EntityLiving){
+						rider.attackEntityFrom(DamageSource.generic, throttle*getDriveableType().collisionDamageTimes);
+					}else if(rider instanceof EntityPlayer){
+						rider.attackEntityFrom(DamageSource.generic, throttle*getDriveableType().collisionDamageTimes);
+					}
 				}
 			}
 		}
@@ -2615,6 +2726,11 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 	{
 		return secondary ? shootDelaySecondary : shootDelayPrimary;
 	}
+	
+	public boolean canLaunchIT1()
+	{
+		return canFireIT1;
+	}
 
 	public float getMinigunSpeed(boolean secondary)
 	{
@@ -2663,6 +2779,150 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		locked = true;
 		player.addChatMessage(new ChatComponentText("Locked"));
 		}
+	}
+	
+	public void IT1Reload()
+	{
+		DriveableType type = getDriveableType();
+		
+		
+		if(stage == 1)
+		{
+			//canFireIT1 = false;
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, 0, 5);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 0, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 5);
+	        
+	        if(drakonRailAngle == -10) stage++;
+		}
+		
+		
+		if(stage == 2)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, -90, 5);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 0, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 1);
+	        
+	        if(drakonDoorAngle == -90) stage++;
+		}
+		
+		if(stage == 3)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, -90, 5);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 179, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 1);
+	        
+	        if(drakonArmAngle == 179) stage++;
+		}
+		
+		if(stage == 4)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, 0, 10);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 180, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 1);
+	        
+	        if(drakonDoorAngle == 0)
+	        {
+	        	if(IT1Loaded())
+	        	{
+		        	stage++;
+		        	reloadAnimTime = 60;
+	        	}
+	        }
+		}
+		
+		if(stage == 5)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, -90, 10);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 180, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 1);
+	        reloadingDrakon = true;
+	        
+	        if(drakonDoorAngle == -90) stage++;
+		}
+		
+		if(stage == 6)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, -90, 5);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 0, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, -10, 1);
+	        
+	        if(drakonArmAngle == 00) stage++;
+		}
+		
+		if(stage == 7)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, 0, 10);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 0, 3);
+	        drakonRailAngle = moveToTarget(drakonRailAngle, 0, 1);
+	        
+	        if(drakonRailAngle == 0 && drakonDoorAngle == 0)
+	        {
+	        	stage++;
+				canFireIT1 = true;
+				reloadingDrakon = false;
+	        }
+		}
+		
+		if(stage == 8)
+		{
+	        drakonDoorAngle = moveToTarget(drakonDoorAngle, 0, 10);
+	        drakonArmAngle = moveToTarget(drakonArmAngle, 0, 3);
+	        if(worldObj.isRemote && this.ticksExisted > 2)
+			drakonRailAngle = moveToTarget(drakonRailAngle,-seats[0].looking.getPitch(), seats[0].seatInfo.aimingSpeed.y);
+        	//reloadAnimTime = 60;
+	        
+	        if(!IT1Loaded()){ stage = 1; canFireIT1 = false;}
+		}
+	}
+	
+	public float moveToTarget(float current, float target, float speed)
+	{	
+		
+		float pitchToMove = (float)((Math.sqrt(target*target)) - Math.sqrt((current*current)));
+		for(; pitchToMove > 180F; pitchToMove -= 360F) {}
+		for(; pitchToMove <= -180F; pitchToMove += 360F) {}
+		
+		float signDeltaY = 0;
+		if(pitchToMove > speed){
+			signDeltaY = 1;
+		} else if(pitchToMove < -speed){
+			signDeltaY = -1;
+		} else {
+			signDeltaY = 0;
+			return target;
+		}
+		
+		
+		if(current > target)
+		{
+			current = current - speed;
+		}
+		
+		else if(current < target)
+		{
+			current = current + speed;
+		}
+		
+		
+		
+		return current;
+	}
+	
+	public boolean IT1Loaded()
+	{
+		DriveableType type = getDriveableType();
+		boolean loaded = false;
+		for(int i = driveableData.getMissileInventoryStart(); i < driveableData.getMissileInventoryStart() + type.numMissileSlots; i++)
+		{
+			ItemStack shell = driveableData.getStackInSlot(i);
+			if(shell != null && shell.getItem() instanceof ItemBullet && type.isValidAmmo(((ItemBullet)shell.getItem()).type, EnumWeaponType.MISSILE))
+			{
+				loaded = true;
+			}
+		}
+		
+		return loaded;
 	}
 	
 	public void tryRecoil()

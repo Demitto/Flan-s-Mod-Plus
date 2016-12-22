@@ -190,6 +190,11 @@ public class EntityWheel extends Entity implements IEntityAdditionalSpawnData
 		return Math.sqrt(motionX * motionX + motionZ * motionZ);
 	}
 	
+		public double getSpeedXYZ()
+	{
+		return Math.cbrt(motionX * motionX + motionZ * motionZ + motionY * motionY);
+	}
+	
 	@Override
     public void setPositionAndRotation2(double d, double d1, double d2, float f, float f1, int i)
     {
