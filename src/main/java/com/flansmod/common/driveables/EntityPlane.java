@@ -430,7 +430,6 @@ public class EntityPlane extends EntityDriveable
 		prevDoorPos = doorPos;
 		prevDoorRot = doorRot;
 		
-		mode = EnumPlaneMode.SIXDOF;
 
 		//Get plane type
         PlaneType type = getPlaneType();
