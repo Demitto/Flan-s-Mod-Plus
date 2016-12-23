@@ -1079,7 +1079,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
         //checkCollsionBox();
 		hugeBoat = (getDriveableType().floatOnWater && getDriveableType().wheelStepHeight == 0);
         //hugeBoat = true;
-		/**
+		
 		if(hugeBoat){
 		for(int i = 0; i < worldObj.loadedEntityList.size(); i++)
 		{
@@ -1100,7 +1100,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 			}
 		}
 		}
-		*/
+		
 		
 		if(deckCheck != prevDeckCheck)
 			onDeck = true;
@@ -1162,7 +1162,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 
         checkInventoryChanged();
         
-		if(worldObj.isAnyLiquid(this.boundingBox))
+		if(worldObj.isAnyLiquid(this.boundingBox) && !hugeBoat)
 		{
 			if(throttle >= type.maxThrottleInWater)
 			{
@@ -2090,7 +2090,7 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		//FlansMod.proxy.spawnParticle("flame", test.intersectionPoint.x + posX, test.intersectionPoint.y + posY - 1, test.intersectionPoint.z + posZ, 0, 0, 0);
 		
 		if(hugeBoat && !stationary){
-			rider.setPosition(riderPos.x, posY + finalPos.y + 10/16F,riderPos.z);
+			rider.setPosition(riderPos.x, posY + finalPos.y + 9.5/16F,riderPos.z);
 		} else if (hugeBoat && stationary) {
 			rider.setPosition(riderPos.x, posY + finalPos.y + 10/16F,riderPos.z);	
 		}
@@ -2468,7 +2468,6 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 		if(tester.intersectionPoint == null) return Vector3f.add(Pos, vel, null);
 		Vector3f slidePlaneNormal = Vector3f.sub(newBasePoint, tester.intersectionPoint, null);
 		slidePlaneNormal.normalise();
-		FlansMod.proxy.spawnParticle("flame", slidePlaneOrigin.x + posX, slidePlaneOrigin.y + posY, slidePlaneOrigin.z + posZ, 0, 0, 0);
 
 		tester.collisionPlaneNormal = slidePlaneNormal;
 		CollisionPlane plane = new CollisionPlane(slidePlaneOrigin, slidePlaneNormal);

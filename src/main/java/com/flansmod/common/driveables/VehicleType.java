@@ -46,6 +46,9 @@ public class VehicleType extends DriveableType
 	
 	public boolean shootWithOpenDoor = false;
 	
+	public int trackLinkFix = 5;
+	public boolean flipLinkFix = false;
+	
 	public ArrayList<SmokePoint> smokers = new ArrayList<SmokePoint>();
 
 	public static ArrayList<VehicleType> types = new ArrayList<VehicleType>();
@@ -94,6 +97,10 @@ public class VehicleType extends DriveableType
                 shootWithOpenDoor = Boolean.parseBoolean(split[1].toLowerCase());
             if(split[0].equals("RotateWheels"))
             	rotateWheels = Boolean.parseBoolean(split[1].toLowerCase());
+            if(split[0].equals("FixTrackLink"))
+            	trackLinkFix = Integer.parseInt(split[1].toLowerCase());
+            if(split[0].equals("FlipLinkFix"))
+            	flipLinkFix = Boolean.parseBoolean(split[1].toLowerCase());
             
             //Animations
             if(split[0].equals("DoorPosition1"))

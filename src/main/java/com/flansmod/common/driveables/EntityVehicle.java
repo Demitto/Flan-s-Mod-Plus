@@ -42,7 +42,6 @@ import com.flansmod.common.guns.ItemBullet;
 import com.flansmod.common.guns.raytracing.BulletHit;
 import com.flansmod.common.network.PacketDriveableKey;
 import com.flansmod.common.network.PacketDriveableKeyHeld;
-import com.flansmod.common.network.PacketIT1Reload;
 import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketPlaySound;
 import com.flansmod.common.network.PacketVehicleControl;
@@ -1068,7 +1067,9 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 
     public void animateFancyTracks()
     {
-    	float funkypart = 5;
+    	float funkypart = getVehicleType().trackLinkFix;
+    	boolean funk = true;
+    	float funk2 = 0;
         for(int i = 0; i < trackLinksLeft.length; i++)
         {
         	trackLinksLeft[i].prevPosition = trackLinksLeft[i].position;
@@ -1082,7 +1083,9 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 			for(; trackLinksLeft[i].zRot <= -180F; trackLinksLeft[i].zRot += 360F) {}
 			float newAngle = rotateTowards(leftTrack.points.get(leftTrack.getTrackPart(trackLinksLeft[i].progress)), trackLinksLeft[i].position);			
 			int part = leftTrack.getTrackPart(trackLinksLeft[i].progress);
-        	trackLinksLeft[i].zRot = Lerp(trackLinksLeft[i].zRot, newAngle, (part != funkypart)?0.5F:1);
+			if(funk) funk2 = (speed < 0)?0:1;
+			else funk2 = (speed < 0)?-1:0;
+        	trackLinksLeft[i].zRot = Lerp(trackLinksLeft[i].zRot, newAngle, (part != (funkypart + funk2))?0.5F:1);
 
         }
         
@@ -1097,7 +1100,9 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
         	trackLinksRight[i].position = rightTrack.getPositionOnTrack(trackLinksRight[i].progress);
 			float newAngle = rotateTowards(rightTrack.points.get(rightTrack.getTrackPart(trackLinksRight[i].progress)), trackLinksRight[i].position);
 			int part = rightTrack.getTrackPart(trackLinksRight[i].progress);
-        	trackLinksRight[i].zRot = Lerp(trackLinksRight[i].zRot, newAngle, (part != funkypart)?0.5F:1);
+			if(funk) funk2 = (speed < 0)?0:1;
+			else funk2 = (speed < 0)?-1:0;
+        	trackLinksRight[i].zRot = Lerp(trackLinksRight[i].zRot, newAngle, (part != (funkypart + funk2))?0.5F:1);
         }
     }
     
