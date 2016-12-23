@@ -429,6 +429,10 @@ public class EntityPlane extends EntityDriveable
 		prevTailWheelRot = tailWheelRot;
 		prevDoorPos = doorPos;
 		prevDoorRot = doorRot;
+<<<<<<< HEAD
+=======
+		
+>>>>>>> origin/master
 
 		//Get plane type
         PlaneType type = getPlaneType();

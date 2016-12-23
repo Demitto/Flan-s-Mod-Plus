@@ -293,9 +293,14 @@ public class RenderPlane extends Render implements IItemRenderer
 		}
 		GL11.glPopMatrix();
 	}
+<<<<<<< HEAD
 	
 	//Broken method to try and rotate playermodel, will fix later.
 	//TODO: Make this work
+=======
+
+	//Non-functional method to rotate player model. Rework
+>>>>>>> origin/master
 	/**
     @SubscribeEvent
     public void preRenderLiving(RenderPlayerEvent.Pre event)
