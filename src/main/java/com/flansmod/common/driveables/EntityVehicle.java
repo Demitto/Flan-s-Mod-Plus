@@ -7,10 +7,15 @@ import java.util.List;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.monster.EntityMob;
+import net.minecraft.entity.passive.EntityBat;
+import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.AxisAlignedBB;
@@ -22,18 +27,25 @@ import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 
 import com.flansmod.api.IExplodeable;
+import com.flansmod.client.model.AnimTankTrack;
+import com.flansmod.client.model.AnimTrackLink;
 import com.flansmod.common.FlansMod;
+import com.flansmod.common.PlayerData;
+import com.flansmod.common.PlayerHandler;
+import com.flansmod.common.RotatedAxes;
 import com.flansmod.common.driveables.DriveableType.ParticleEmitter;
 import com.flansmod.common.driveables.VehicleType.SmokePoint;
 import com.flansmod.common.guns.EntityBullet;
 import com.flansmod.common.guns.EnumFireMode;
 import com.flansmod.common.guns.InventoryHelper;
+import com.flansmod.common.guns.ItemBullet;
 import com.flansmod.common.guns.raytracing.BulletHit;
 import com.flansmod.common.network.PacketDriveableKey;
 import com.flansmod.common.network.PacketDriveableKeyHeld;
 import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketPlaySound;
 import com.flansmod.common.network.PacketVehicleControl;
+import com.flansmod.common.teams.Team;
 import com.flansmod.common.teams.TeamsManager;
 import com.flansmod.common.tools.ItemTool;
 import com.flansmod.common.vector.Vector3f;
@@ -78,6 +90,13 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
     //Animation vectors
 	public Vector3f doorPos = new Vector3f(0,0,0);
 	public Vector3f doorRot = new Vector3f(0,0,0);
+	public Vector3f door2Pos = new Vector3f(0,0,0);
+	public Vector3f door2Rot = new Vector3f(0,0,0);
+	
+	public Vector3f prevDoorPos = new Vector3f(0,0,0);
+	public Vector3f prevDoorRot = new Vector3f(0,0,0);
+	public Vector3f prevDoor2Pos = new Vector3f(0,0,0);
+	public Vector3f prevDoor2Rot = new Vector3f(0,0,0);
 	
 	//Main turret sounds for server (bullshit basically)
 	public int yawDelay = 0;
@@ -87,6 +106,20 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 	
 	public boolean deployedSmoke = false;
 	
+	
+	//Dangerous sentry stuff
+	/** Stops the sentry shooting whoever placed it or their teammates */
+	public EntityPlayer placer = null;
+	/** For getting the placer after a reload */
+	public String placerName = null;
+	public Entity target = null;
+	public static final float targetAcquireInterval = 10;
+	
+	public AnimTankTrack rightTrack;
+	public AnimTankTrack leftTrack;
+	
+	public AnimTrackLink trackLinksLeft[] = new AnimTrackLink[0];
+	public AnimTrackLink trackLinksRight[] = new AnimTrackLink[0];
 
     public EntityVehicle(World world)
     {
@@ -104,19 +137,45 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 	}
 
 	//This one allows you to deal with spawning from items
-	public EntityVehicle(World world, double x, double y, double z, EntityPlayer placer, VehicleType type, DriveableData data)
+	public EntityVehicle(World world, double x, double y, double z, EntityPlayer p, VehicleType type, DriveableData data)
 	{
 		super(world, type, data);
+		placer = p;
+		placerName = p.getCommandSenderName();
 		stepHeight = 1.0F;
 		setPosition(x, y, z);
-		rotateYaw(placer.rotationYaw + 90F);
+		rotateYaw(p.rotationYaw + 90F);
 		initType(type, false);
+		setupTracks(type);
+	}
+	
+	public void setupTracks(DriveableType type)
+	{
+		rightTrack = new AnimTankTrack(type.rightTrackPoints, type.trackLinkLength);
+		leftTrack = new AnimTankTrack(type.leftTrackPoints, type.trackLinkLength);
+		int numLinks = Math.round(rightTrack.getTrackLength()/ type.trackLinkLength);
+		trackLinksLeft = new AnimTrackLink[numLinks];
+		trackLinksRight = new AnimTrackLink[numLinks];
+        for(int i = 0; i < numLinks; i++)
+        {
+        	float progress = 0.01F + (type.trackLinkLength * i);
+    		int trackPart = leftTrack.getTrackPart(progress);
+        	trackLinksLeft[i] = new AnimTrackLink(progress);
+        	trackLinksRight[i] = new AnimTrackLink(progress);
+        	trackLinksLeft[i].position = leftTrack.getPositionOnTrack(progress);
+        	trackLinksRight[i].position = rightTrack.getPositionOnTrack(progress);
+        	trackLinksLeft[i].rot = new RotatedAxes(0,0,rotateTowards(leftTrack.points.get((trackPart == 0)? leftTrack.points.size()-1:trackPart-1), trackLinksLeft[i].position));
+        	trackLinksRight[i].rot = new RotatedAxes(0,0,rotateTowards(rightTrack.points.get((trackPart == 0)? rightTrack.points.size()-1:trackPart-1), trackLinksRight[i].position));
+        	trackLinksLeft[i].zRot = rotateTowards(leftTrack.points.get((trackPart == 0)? leftTrack.points.size()-1:trackPart-1), trackLinksLeft[i].position);
+        	trackLinksRight[i].zRot = rotateTowards(rightTrack.points.get((trackPart == 0)? rightTrack.points.size()-1:trackPart-1), trackLinksRight[i].position);
+        }
 	}
 
 	@Override
 	protected void initType(DriveableType type, boolean clientSide)
 	{
 		super.initType(type, clientSide);
+		setupTracks(type);
 	}
 
 	@Override
@@ -240,15 +299,30 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 					throttle = 0F;
 				if(throttle < -0.001F)
 					throttle = 0F;
+				
+				target = null;
 				return true;
 			}
 			case 5 : //Down : Do nothing
 			{
+		    	Minecraft mc = Minecraft.getMinecraft();
+				if(toggleTimer <= 0 && TeamsManager.allowVehicleZoom)
+				{
+					toggleTimer = 10;
+			    	if(mc.gameSettings.fovSetting != 10){
+					mc.gameSettings.fovSetting = 10;
+					mc.gameSettings.mouseSensitivity = 0.2F;
+					}
+			    	else if(mc.gameSettings.fovSetting == 10){
+					mc.gameSettings.fovSetting = 70;
+					mc.gameSettings.mouseSensitivity = 0.5F;}
+				}
 				return true;
 			}
 			case 6 : //Exit : Get out
 			{
 				seats[0].riddenByEntity.setInvisible(false);
+				//resetZoom();
 				seats[0].riddenByEntity.mountEntity(null);
           		return true;
 			}
@@ -267,18 +341,25 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 			}
 			case 10 : //Change control mode : Do nothing
 			{
+				FlansMod.proxy.changeControlMode((EntityPlayer)seats[0].riddenByEntity);
+				seats[0].targetYaw = seats[0].looking.getYaw();
+				seats[0].targetPitch = seats[0].looking.getPitch();
 				return true;
 			}
 			case 11 : //Roll left : Do nothing
 			{
+				seats[0].targetYaw -= seats[0].seatInfo.aimingSpeed.x;
 				return true;
 			}
 			case 12 : //Roll right : Do nothing
 			{
+				seats[0].targetYaw += seats[0].seatInfo.aimingSpeed.x;
 				return true;
 			}
 			case 13 : // Gear : Do nothing
 			{
+				if(seats[0].targetPitch < -seats[0].seatInfo.minPitch)
+				seats[0].targetPitch += seats[0].seatInfo.aimingSpeed.y;
 				return true;
 			}
 			case 14 : // Door
@@ -295,6 +376,8 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 			}
 			case 15 : // Wing : Do nothing
 			{
+				if(seats[0].targetPitch > -seats[0].seatInfo.maxPitch)
+				seats[0].targetPitch -= seats[0].seatInfo.aimingSpeed.y;
 				return true;
 			}
             case 16 : // Trim Button
@@ -335,6 +418,16 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 		
 
 	}
+	@SideOnly(Side.CLIENT)
+    public void resetZoom()
+    {
+		if(TeamsManager.allowVehicleZoom){
+	    	Minecraft mc = Minecraft.getMinecraft();
+	    	if(mc.gameSettings.fovSetting == 10){
+			mc.gameSettings.fovSetting = 70;
+			mc.gameSettings.mouseSensitivity = 0.5F;}
+		}
+    }
 
     @Override
 	public Vector3f getLookVector(ShootPoint dp)
@@ -350,14 +443,15 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 
         super.onUpdate();
 		this.renderDistanceWeight = 4000.0D;
-
-        for(Entity e : findEntitiesWithinbounds())
-        {
-        	if(e != this){
-        		moveRiders(e);
-        	}
-        }
-
+		animateFancyTracks();
+		if(worldObj.isRemote){
+	        for(Entity e : findEntitiesWithinbounds())
+	        {
+	        	if(!isPartOfThis(e) && e instanceof EntityPlayer){
+	        		moveRiders(e);
+	        	}
+	        }
+		}
         
 		//wheelsYaw -= 1F;
         
@@ -369,6 +463,11 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
         {
         	FlansMod.log("Vehicle type null. Not ticking vehicle");
         	return;
+        }
+        
+        if(type.shootWithOpenDoor)
+        {
+        	canFire = varDoor;
         }
 
         //Work out if this is the client side and the player is driving
@@ -424,12 +523,21 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 			wheelsAngle += throttle / 7F;
 		}
 		
+		prevDoorPos = doorPos;
+		prevDoorRot = doorRot;
+		prevDoor2Pos = door2Pos;
+		prevDoor2Rot = door2Rot;
+		
 		if(!varDoor){
 			doorPos = transformPart(doorPos, type.doorPos1, type.doorRate);
 			doorRot = transformPart(doorRot, type.doorRot1, type.doorRotRate);
+			door2Pos = transformPart(door2Pos, type.door2Pos1, type.door2Rate);
+			door2Rot = transformPart(door2Rot, type.door2Rot1, type.door2RotRate);
 		} else {
 			doorPos = transformPart(doorPos, type.doorPos2, type.doorRate);
 			doorRot = transformPart(doorRot, type.doorRot2, type.doorRotRate);
+			door2Pos = transformPart(door2Pos, type.door2Pos2, type.door2Rate);
+			door2Rot = transformPart(door2Rot, type.door2Rot2, type.door2RotRate);
 		}
 
 		//Return the wheels to their resting position
@@ -583,7 +691,7 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 
 			//Now we apply gravity
 			if(allWheelsOnGround && !(type.floatOnWater && worldObj.isAnyLiquid(wheel.boundingBox.copy().offset(0, -type.floatOffset, 0))) && !wheel.onDeck){
-				wheel.moveEntity(0F, (!onDeck)?-0.98F/5:0, 0F);
+				wheel.moveEntity(0F, -0.98/5, 0F);
 			} else if((type.floatOnWater && worldObj.isAnyLiquid(wheel.boundingBox.copy().offset(0, -type.floatOffset, 0))) && worldObj.isAnyLiquid(wheel.boundingBox.copy().offset(0, 1 - type.floatOffset, 0)) && !wheel.onDeck){
 				wheel.moveEntity(0F, 1F, 0F);	
 			} else if((type.floatOnWater && worldObj.isAnyLiquid(wheel.boundingBox.copy().offset(0, -type.floatOffset, 0))) && !worldObj.isAnyLiquid(wheel.boundingBox.copy().offset(0, 1 - type.floatOffset, 0)) || wheel.onDeck){
@@ -594,7 +702,25 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 				wheel.moveEntity(0F, (!onDeck)?-0.98F:0, 0F);	
 			}
 			
-			if((throttle >= 0.2 || throttle <= -0.2) && wheel.getSpeedXYZ() <= getAvgWheelSpeedXYZ()/4) throttle = 0;
+			if((throttle >= 0.3 || throttle <= -0.3)){
+				Vector3f motionVec = new Vector3f(0,0,0);
+				Vector3f targetVec = type.wheelPositions[wheel.ID].position;
+				targetVec = axes.findLocalVectorGlobally(targetVec);
+				if(throttle > 0.1) motionVec = new Vector3f(1,0,0);
+				if(throttle < -0.1) motionVec = new Vector3f(-1,0,0);
+				if((wheel.ID == 2 || wheel.ID == 3) && wheelsYaw >= 0.1) motionVec = new Vector3f(motionVec.x,0,1);
+				if((wheel.ID == 0 || wheel.ID == 1) && wheelsYaw <= -0.1) motionVec = new Vector3f(motionVec.x,0,-1);
+				motionVec = axes.findLocalVectorGlobally(motionVec);
+				Vector3f test1Pos = new Vector3f(posX + targetVec.x + motionVec.x,posY + targetVec.y,posZ + targetVec.z + motionVec.z);
+				boolean test1 = worldObj.isAirBlock(Math.round(test1Pos.x), Math.round(test1Pos.y), Math.round(test1Pos.z));
+				boolean test2 = worldObj.isAirBlock(Math.round(test1Pos.x), Math.round(test1Pos.y + type.wheelStepHeight), Math.round(test1Pos.z));
+				if(!test1 && !test2){
+					throttle *= 0.6;
+					for(EntityWheel wheel2 : wheels){
+						Vector3f wheelPos3 = axes.findLocalVectorGlobally(type.wheelPositions[wheel2.ID].position);
+					}
+				}
+			}
 		}
 		
 		if(wheels[0] != null && wheels[1] != null && wheels[2] != null && wheels[3] != null)
@@ -607,6 +733,7 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 		
 		double bmy = this.motionY;
 		this.motionY = amountToMoveCar.y;
+		if(amountToMoveCar != null)
 		moveEntity(amountToMoveCar.x, amountToMoveCar.y, amountToMoveCar.z);
 		this.motionY = bmy;
 
@@ -617,6 +744,19 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 			Vector3f leftSideCentre = new Vector3f((wheels[0].posX + wheels[3].posX) / 2F, (wheels[0].posY + wheels[3].posY) / 2F, (wheels[0].posZ + wheels[3].posZ) / 2F);
 			Vector3f rightSideCentre = new Vector3f((wheels[1].posX + wheels[2].posX) / 2F, (wheels[1].posY + wheels[2].posY) / 2F, (wheels[1].posZ + wheels[2].posZ) / 2F);
 
+			if(frontAxleCentre.y > backAxleCentre.y){
+				if(throttle > 0){
+					float diff = frontAxleCentre.y - backAxleCentre.y;
+					float dx = frontAxleCentre.x - backAxleCentre.x;
+					dx = (float)Math.sqrt(dx*dx);
+					float dz = frontAxleCentre.z - backAxleCentre.z;
+					dz = (float)Math.sqrt(dz*dz);
+					float dist = (float)Math.sqrt(dx + dz);
+					diff = diff/dist;
+					throttle *= (1F - (diff/60));
+				}
+			}
+			
 			float dx = frontAxleCentre.x - backAxleCentre.x;
 			float dy = frontAxleCentre.y - backAxleCentre.y;
 			float dz = frontAxleCentre.z - backAxleCentre.z;
@@ -803,10 +943,177 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 			animFrameRight = type.animFrames;
 		}
 		
+		//if(seats[0].riddenByEntity == null) throttle = 1F;
+		
+		//boolean sentry2;
+		//sentry2 = false;
+		/**
+		if(sentry2){
+			if(target != null && target.isDead)
+				target = null;
+			}
+			
+			if(target == null && sentry2)
+			{
+				target = getValidTarget();
+			}
+			
+			if(target != null)
+			{
+
+				double dX = target.posX - posX;
+				double dY = target.posY - (posY);
+				double dZ = target.posZ - posZ;
+				boolean canShootHomingMissile = false;
+				
+				double distanceToTarget = target.getDistanceToEntity(this);
+				dX += (target.posX - target.prevPosX) * (distanceToTarget/type.bulletSpeed);
+				dY += (target.posY - target.prevPosY) * (distanceToTarget/type.bulletSpeed);
+				dZ += (target.posZ - target.prevPosZ) * (distanceToTarget/type.bulletSpeed);
+				
+				int slot = -1;
+				for(int i = driveableData.getBombInventoryStart(); i < driveableData.getBombInventoryStart() + type.numBombSlots; i++)
+				{
+					ItemStack bomb = driveableData.getStackInSlot(i);
+					if(bomb != null && bomb.getItem() instanceof ItemBullet && type.isValidAmmo(((ItemBullet)bomb.getItem()).type, EnumWeaponType.SHELL))
+					{
+						slot = i;
+					}
+				}
+				
+				if(slot != -1)
+				{
+					ItemStack bulletStack = driveableData.getStackInSlot(slot);
+					ItemBullet bulletItem = (ItemBullet)bulletStack.getItem();
+					
+		
+				}
+				//distanceToTarget = Math.sqrt((dX * dX) + (dZ * dZ));
+				Vector3f initialMot = (this.getPositionOnTurret(new Vector3f(type.bulletSpeed, 0, 0), true));
+				float bulletSpeed2 = (float)Math.sqrt((initialMot.x * initialMot.x) + (initialMot.z * initialMot.z));
+				float travelTime = (float)distanceToTarget/type.bulletSpeed;
+				dY += initialMot.y + (0.02F * travelTime);
+				distanceToTarget = Math.sqrt(dX * dX + dY * dY + dZ * dZ);
+				float targetRange = 150F;
+				if(distanceToTarget > targetRange)
+					target = null;
+				else if(!canShootHomingMissile)
+				{
+					float newYaw = (float)Math.atan2(dZ, dX) * 180F / 3.14159F - axes.getYaw();
+					float newPitch = -(float)Math.atan2(dY, Math.sqrt(dX * dX + dZ * dZ)) * 180F / 3.14159F - axes.getPitch();
+					
+					float turnSpeed = 0.25F;
+					for(; newYaw > 180F; newYaw -= 360F) {}
+					for(; newYaw <= -180F; newYaw += 360F) {}
+					
+					
+					if(newPitch > -seats[0].seatInfo.minPitch)
+						newPitch = -seats[0].seatInfo.minPitch;
+					if(newPitch < -seats[0].seatInfo.maxPitch)
+						newPitch = -seats[0].seatInfo.maxPitch;
+					//seats[0].targetYaw = newYaw;
+					//seats[0].targetPitch = newPitch;
+					seats[0].looking.setAngles(moveToTarget(seats[0].looking.getYaw(), newYaw, seats[0].seatInfo.aimingSpeed.x), moveToTarget(seats[0].looking.getPitch(), newPitch, seats[0].seatInfo.aimingSpeed.y), 0F);
+				}
+		}
+		*/
+		
         //rotateYaw(10);
     }
     
-    public void dischargeSmoke()
+	public Entity getValidTarget()
+	{
+
+		if(placer == null && placerName != null)
+			placer = worldObj.getPlayerEntityByName(placerName);
+		float targetRange = 150F;
+		Entity target = null;
+		for(Object obj : worldObj.getEntitiesWithinAABBExcludingEntity(this, boundingBox.expand(targetRange, targetRange, targetRange)))
+		{
+			Entity candidateEntity = (Entity)obj;
+			boolean targetMobs = true;
+			boolean targetPlayers = false;
+			boolean targetPlanes = true;
+			boolean targetVehicles = true;
+			if((targetMobs && candidateEntity instanceof EntityBat) || (targetPlayers && candidateEntity instanceof EntityPlayer) || (targetPlanes && candidateEntity instanceof EntityPlane) || (targetVehicles && candidateEntity instanceof EntityVehicle))
+			{
+				//Check that this entity is actually in range and visible
+				if(candidateEntity.getDistanceToEntity(this) < targetRange)
+				{
+					targetRange = candidateEntity.getDistanceToEntity(this);
+					if(isPartOfThis(candidateEntity)) candidateEntity = null;
+					if(candidateEntity instanceof EntityPlayer)
+					{
+						if(candidateEntity == placer || candidateEntity.getCommandSenderName().equals(placerName))
+							candidateEntity = null;
+						if(TeamsManager.enabled && TeamsManager.getInstance().currentRound != null && placer != null)
+						{
+							PlayerData placerData = PlayerHandler.getPlayerData(placer, worldObj.isRemote ? Side.CLIENT : Side.SERVER);
+							PlayerData candidateData = PlayerHandler.getPlayerData((EntityPlayer)candidateEntity, worldObj.isRemote ? Side.CLIENT : Side.SERVER);
+							if(candidateData.team == Team.spectators || candidateData.team == null)
+								candidateEntity = null;
+							if(!TeamsManager.getInstance().currentRound.gametype.playerCanAttack((EntityPlayerMP)placer, placerData.team, (EntityPlayerMP)candidateEntity, candidateData.team))
+								candidateEntity = null;
+						}
+					}
+					target = candidateEntity;
+				}
+			}
+		}
+		if(target != null)
+		return target;
+		else return null;
+	}
+
+    public void animateFancyTracks()
+    {
+    	float funkypart = getVehicleType().trackLinkFix;
+    	boolean funk = true;
+    	float funk2 = 0;
+        for(int i = 0; i < trackLinksLeft.length; i++)
+        {
+        	trackLinksLeft[i].prevPosition = trackLinksLeft[i].position;
+        	trackLinksLeft[i].prevZRot = trackLinksLeft[i].zRot;
+        	float speed = throttle*1.5F - (wheelsYaw/12);
+        	trackLinksLeft[i].progress += speed;
+    		if(trackLinksLeft[i].progress > leftTrack.getTrackLength()) trackLinksLeft[i].progress -= leftTrack.getTrackLength();
+    		if(trackLinksLeft[i].progress < 0) trackLinksLeft[i].progress += leftTrack.getTrackLength();
+        	trackLinksLeft[i].position = leftTrack.getPositionOnTrack(trackLinksLeft[i].progress);
+			for(; trackLinksLeft[i].zRot > 180F; trackLinksLeft[i].zRot -= 360F) {}
+			for(; trackLinksLeft[i].zRot <= -180F; trackLinksLeft[i].zRot += 360F) {}
+			float newAngle = rotateTowards(leftTrack.points.get(leftTrack.getTrackPart(trackLinksLeft[i].progress)), trackLinksLeft[i].position);			
+			int part = leftTrack.getTrackPart(trackLinksLeft[i].progress);
+			if(funk) funk2 = (speed < 0)?0:1;
+			else funk2 = (speed < 0)?-1:0;
+        	trackLinksLeft[i].zRot = Lerp(trackLinksLeft[i].zRot, newAngle, (part != (funkypart + funk2))?0.5F:1);
+
+        }
+        
+        for(int i = 0; i < trackLinksRight.length; i++)
+        {
+        	trackLinksRight[i].prevPosition = trackLinksRight[i].position;
+        	trackLinksRight[i].prevZRot = trackLinksRight[i].zRot;
+        	float speed = throttle*1.5F + (wheelsYaw/12);
+        	trackLinksRight[i].progress += speed;
+    		if(trackLinksRight[i].progress > rightTrack.getTrackLength()) trackLinksRight[i].progress -= leftTrack.getTrackLength();
+    		if(trackLinksRight[i].progress < 0) trackLinksRight[i].progress += rightTrack.getTrackLength();    		
+        	trackLinksRight[i].position = rightTrack.getPositionOnTrack(trackLinksRight[i].progress);
+			float newAngle = rotateTowards(rightTrack.points.get(rightTrack.getTrackPart(trackLinksRight[i].progress)), trackLinksRight[i].position);
+			int part = rightTrack.getTrackPart(trackLinksRight[i].progress);
+			if(funk) funk2 = (speed < 0)?0:1;
+			else funk2 = (speed < 0)?-1:0;
+        	trackLinksRight[i].zRot = Lerp(trackLinksRight[i].zRot, newAngle, (part != (funkypart + funk2))?0.5F:1);
+        }
+    }
+    
+    public float rotateTowards(Vector3f point, Vector3f original)
+    {
+    	
+    	float angle = (float)Math.atan2(point.y - original.y, point.x - original.x);
+    	return angle;
+    }
+
+	public void dischargeSmoke()
     {
     	VehicleType type = this.getVehicleType();
         for(int i = 0; i < type.smokers.size(); i++)
@@ -851,6 +1158,8 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
     	
 		Vector3f size = new Vector3f(type.harvestBoxSize.x/8F, type.harvestBoxSize.y/8F, type.harvestBoxSize.z/8F);
 		Vector3f pos = new Vector3f(type.harvestBoxPos.x/8F, type.harvestBoxPos.y/8F, type.harvestBoxPos.z/8F);
+		boolean fancy = false;
+		if(!fancy){
 		for(float x = pos.x; x <= pos.x + size.x; x++)
 		{
 			for(float y = pos.y; y <= pos.y + size.y; y++)
@@ -868,7 +1177,7 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 					
 					for(int i = 0; i < entityhere.size(); i++)
 					{
-						if(entityhere.get(i) instanceof EntityLivingBase) riddenEntities.add(entityhere.get(i));
+						if(entityhere.get(i) instanceof EntityPlayer && !isPartOfThis(entityhere.get(i))) riddenEntities.add(entityhere.get(i));
 					}
 					//Iterator<Entity> iter = entityhere.iterator();
 					/**
@@ -881,6 +1190,20 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable
 
 				}
 			}
+		} 
+		} else {
+			AxisAlignedBB checkBox = this.getBoundingBox().copy().expand(50, 50, 50);
+			
+			List<Entity> entityhere = worldObj.getEntitiesWithinAABB(EntityPlayer.class, checkBox);
+			
+			for(int i = 0; i < entityhere.size(); i++)
+			{
+				if(entityhere.get(i) instanceof EntityPlayer){ 
+					riddenEntities.add(entityhere.get(i));
+					//AxisAlignedBB checkBox2 = this.boundingBox.copy().offset(this.posX - entityhere.get(i).posX,this.posY - entityhere.get(i).posY, this.posZ - entityhere.get(i).posZ);
+				}
+			}
+
 		}
     	return riddenEntities;
     }

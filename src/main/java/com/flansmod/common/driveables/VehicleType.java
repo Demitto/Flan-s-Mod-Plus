@@ -28,6 +28,7 @@ public class VehicleType extends DriveableType
     public boolean hasDoor = false;
     
     
+    
 	//Door animations
 	public Vector3f doorPos1 = new Vector3f(0,0,0);
 	public Vector3f doorPos2 = new Vector3f(0,0,0);
@@ -35,6 +36,18 @@ public class VehicleType extends DriveableType
 	public Vector3f doorRot2 = new Vector3f(0,0,0);
 	public Vector3f doorRate = new Vector3f(0,0,0);
 	public Vector3f doorRotRate = new Vector3f(0,0,0);
+	
+	public Vector3f door2Pos1 = new Vector3f(0,0,0);
+	public Vector3f door2Pos2 = new Vector3f(0,0,0);
+	public Vector3f door2Rot1 = new Vector3f(0,0,0);
+	public Vector3f door2Rot2 = new Vector3f(0,0,0);
+	public Vector3f door2Rate = new Vector3f(0,0,0);
+	public Vector3f door2RotRate = new Vector3f(0,0,0);
+	
+	public boolean shootWithOpenDoor = false;
+	
+	public int trackLinkFix = 5;
+	public boolean flipLinkFix = false;
 	
 	public ArrayList<SmokePoint> smokers = new ArrayList<SmokePoint>();
 
@@ -80,8 +93,14 @@ public class VehicleType extends DriveableType
             //Visuals
             if(split[0].equals("HasDoor"))
                 hasDoor = Boolean.parseBoolean(split[1].toLowerCase());
+            if(split[0].equals("ShootWithOpenDoor"))
+                shootWithOpenDoor = Boolean.parseBoolean(split[1].toLowerCase());
             if(split[0].equals("RotateWheels"))
             	rotateWheels = Boolean.parseBoolean(split[1].toLowerCase());
+            if(split[0].equals("FixTrackLink"))
+            	trackLinkFix = Integer.parseInt(split[1].toLowerCase());
+            if(split[0].equals("FlipLinkFix"))
+            	flipLinkFix = Boolean.parseBoolean(split[1].toLowerCase());
             
             //Animations
             if(split[0].equals("DoorPosition1"))
@@ -96,7 +115,22 @@ public class VehicleType extends DriveableType
             	doorRate = new Vector3f(split[1], shortName);
             if(split[0].equals("DoorRotRate"))
             	doorRotRate = new Vector3f(split[1], shortName);
+            
+            if(split[0].equals("Door2Position1"))
+            	door2Pos1 = new Vector3f(split[1], shortName);
+            if(split[0].equals("Door2Position2"))
+            	door2Pos2 = new Vector3f(split[1], shortName);
+            if(split[0].equals("Door2Rotation1"))
+            	door2Rot1 = new Vector3f(split[1], shortName);
+            if(split[0].equals("Door2Rotation2"))
+            	door2Rot2 = new Vector3f(split[1], shortName);
+            if(split[0].equals("Door2Rate"))
+            	door2Rate = new Vector3f(split[1], shortName);
+            if(split[0].equals("Door2RotRate"))
+            	door2RotRate = new Vector3f(split[1], shortName);
 
+            
+            
 			//Armaments
 			if(split[0].equals("ShootDelay"))
 				vehicleShootDelay = Integer.parseInt(split[1]);

@@ -16,6 +16,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 
+import com.flansmod.client.model.GunAnimations;
 import com.flansmod.common.driveables.ContainerDriveableInventory;
 import com.flansmod.common.driveables.ContainerDriveableMenu;
 import com.flansmod.common.driveables.DriveablePart;
@@ -98,12 +99,12 @@ public class CommonProxy
 	{
 		return false;
 	}
-	
 	public EntityPlayer getThePlayer()
 	{
 		return null;
 	}
-
+	
+	
 	public boolean isOnSameTeamClientPlayer(EntityLivingBase entity)
 	{
 		return false;
@@ -121,6 +122,15 @@ public class CommonProxy
 	public Object getClientGui(int ID, EntityPlayer player, World world, int x, int y, int z)
 	{
 		return null;
+	}
+	
+	public HashMap<EntityLivingBase, GunAnimations> getAnimations(boolean left)
+	{
+		if(left)
+		{
+			return FlansMod.gunAnimationsLeft;
+		}
+		else return FlansMod.gunAnimationsRight;
 	}
 
 	/** Gets the container for the specified GUI */

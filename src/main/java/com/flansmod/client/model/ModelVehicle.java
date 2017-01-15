@@ -1,11 +1,13 @@
 package com.flansmod.client.model;
 
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.client.model.AdvancedModelLoader;
 import net.minecraftforge.client.model.IModelCustom;
 
 import org.lwjgl.opengl.GL11;
 
 import com.flansmod.client.tmt.ModelRendererTurbo;
+import com.flansmod.common.FlansMod;
 import com.flansmod.common.driveables.DriveableType;
 import com.flansmod.common.driveables.EntityDriveable;
 import com.flansmod.common.driveables.EntityPlane;
@@ -35,6 +37,8 @@ public class ModelVehicle extends ModelDriveable
 	public ModelRendererTurbo leftAnimTrackModel[][] = new ModelRendererTurbo[0][0];  //Unlimited frame track animations
 	public ModelRendererTurbo rightAnimTrackModel[][] = new ModelRendererTurbo[0][0];
 	
+	public ModelRendererTurbo fancyTrackModel[] = new ModelRendererTurbo[0];
+	
 	public ModelRendererTurbo rightAnimTrackModel1[] = new ModelRendererTurbo[0]; //3 frame track animation
 	public ModelRendererTurbo leftAnimTrackModel1[] = new ModelRendererTurbo[0];
 	public ModelRendererTurbo rightAnimTrackModel2[] = new ModelRendererTurbo[0];
@@ -57,10 +61,13 @@ public class ModelVehicle extends ModelDriveable
 	public ModelRendererTurbo animBarrelModel[] = new ModelRendererTurbo[0];
 	public Vector3f barrelAttach = new Vector3f();
 	
-    //Door
+    //Doors
 	public ModelRendererTurbo doorAnimModel[] = new ModelRendererTurbo[0];
 	public Vector3f doorAttach = new Vector3f();
-
+	public ModelRendererTurbo door2AnimModel[] = new ModelRendererTurbo[0];
+	public Vector3f door2Attach = new Vector3f();
+	
+	
 	//IT-1
 	public ModelRendererTurbo drakonModel[] = new ModelRendererTurbo[0];
 	public ModelRendererTurbo drakonReloadModel[] = new ModelRendererTurbo[0];
@@ -76,6 +83,16 @@ public class ModelVehicle extends ModelDriveable
 	public float animFrameLeft = 0;
 	public float animFrameRight = 0;
 	//this point
+	
+	//Turret modifier
+	public Vector3f turretScale = new Vector3f(1,1,1);
+	public Vector3f turretTrans = new Vector3f(0,0,0);
+	
+	//model stuff
+	public boolean fancyTurret = false;
+	public String turretName;
+	
+	
 
 	@Override
 	public void render(EntityDriveable driveable, float f1)
@@ -98,8 +115,12 @@ public class ModelVehicle extends ModelDriveable
 		renderPart(leftTrackWheelModels);
 		renderPart(bodyDoorCloseModel);
 		renderPart(trailerModel);
+		GL11.glPushMatrix();
+		GL11.glScalef(turretScale.x, turretScale.y, turretScale.z);
+		GL11.glTranslatef(turretTrans.x, turretTrans.y, turretTrans.z);
 		renderPart(turretModel);
 		renderPart(barrelModel);
+		GL11.glPopMatrix();
 		renderPart(drillHeadModel);
 		for(ModelRendererTurbo[] mods : ammoModel)
 			renderPart(mods);
@@ -125,6 +146,10 @@ public class ModelVehicle extends ModelDriveable
 		renderPart(doorAnimModel);
 		GL11.glPopMatrix();	
 		GL11.glPushMatrix();
+		GL11.glTranslatef(door2Attach.x, door2Attach.y, -door2Attach.z);
+		renderPart(door2AnimModel);
+		GL11.glPopMatrix();	
+		GL11.glPushMatrix();
 		GL11.glTranslatef(drakonArmAttach.x, drakonArmAttach.y, drakonArmAttach.z);
 		renderPart(drakonArmModel);
 		GL11.glPopMatrix();
@@ -137,9 +162,10 @@ public class ModelVehicle extends ModelDriveable
 		GL11.glTranslatef(drakonDoorAttach.x, drakonDoorAttach.y, drakonDoorAttach.z);
 		renderPart(drakonDoorModel);
 		GL11.glPopMatrix();
+		
 	}
-	
-    public void render(float f5, EntityVehicle vehicle, float f)
+
+	public void render(float f5, EntityVehicle vehicle, float f)
     {
     	boolean rotateWheels = vehicle.getVehicleType().rotateWheels;
 		animFrameLeft = vehicle.animFrameLeft;
@@ -344,15 +370,40 @@ public class ModelVehicle extends ModelDriveable
 			}
 		}
     }
+    
+    public void renderDoor2(EntityVehicle vehicle, float f5)
+    {
+		if(vehicle.isPartIntact(EnumDriveablePart.core))
+		{
+			for (ModelRendererTurbo aDoor2AnimModel : door2AnimModel) {
+				aDoor2AnimModel.render(f5);
+			}
+		}
+    }
 		
     /** Render the tank turret 
      * @param dt */
 	public void renderTurret(float f, float f1, float f2, float f3, float f4, float f5, EntityVehicle vehicle, float dt)
     {		
 		VehicleType type = vehicle.getVehicleType();
-		
+		GL11.glPushMatrix();
+		GL11.glScalef(turretScale.x, turretScale.y, turretScale.z);
+		GL11.glTranslatef(turretTrans.x, turretTrans.y, turretTrans.z);
+		IModelCustom model;
+		ResourceLocation turretobj;
 		//Render main turret barrel
 		{
+			if(fancyTurret){
+			turretobj = new ResourceLocation(FlansMod.MODID, "models/"+ turretName);
+			model = AdvancedModelLoader.loadModel(turretobj);
+			GL11.glPushMatrix();
+			float scale = 1.0F;
+			//GL11.glScalef(scale,scale,scale);
+			//GL11.glRotatef(0, 0, 1, 0);
+			//GL11.glTranslatef(0, -0.55F, 0);
+			model.renderAll();
+			GL11.glPopMatrix();
+			}
 			float yaw = vehicle.seats[0].looking.getYaw();
 			float pitch = vehicle.seats[0].looking.getPitch();
 			float dPitch = (vehicle.seats[0].looking.getPitch() - vehicle.seats[0].prevLooking.getPitch());
@@ -366,6 +417,7 @@ public class ModelVehicle extends ModelDriveable
 				aBarrelModel.render(f5, oldRotateOrder);
 			}
 			GL11.glPushMatrix();
+			GL11.glTranslatef(barrelAttach.x,barrelAttach.y, -barrelAttach.z);
 			GL11.glRotatef(-aPitch, 0F, 0F, 1F);
 			for (ModelRendererTurbo aBarrelModel : barrelSpecModel) {
 				aBarrelModel.render(f5, oldRotateOrder);
@@ -383,7 +435,8 @@ public class ModelVehicle extends ModelDriveable
 				}
 			}
 			
-						//Render Drakon models
+			
+			//Render Drakon models
 			float armAngle = vehicle.drakonArmAngle;
 			float dArmAngle = (vehicle.drakonArmAngle - vehicle.prevDrakonArmAngle);
 	        for(; dArmAngle > 180F; dArmAngle -= 360F) {}
@@ -440,7 +493,7 @@ public class ModelVehicle extends ModelDriveable
 			}
 			
 			GL11.glPopMatrix();
-
+			
 		}
 		
         //Render turret guns
@@ -484,6 +537,7 @@ public class ModelVehicle extends ModelDriveable
     			}
         	}
         }
+        GL11.glPopMatrix();
     }
 	
 	public void renderAnimBarrel(float f, float f1, float f2, float f3, float f4, float f5, EntityVehicle vehicle, float dt)
@@ -504,6 +558,13 @@ public class ModelVehicle extends ModelDriveable
 				adrillHeadModel.render(0.0625F, oldRotateOrder);
 			}
         }
+	}
+	
+	public void renderFancyTracks(EntityVehicle vehicle, float f)
+	{
+		for (ModelRendererTurbo adrillHeadModel : fancyTrackModel) {
+			adrillHeadModel.render(0.0625F, oldRotateOrder);
+		}
 	}
 	
 	@Override
@@ -535,16 +596,18 @@ public class ModelVehicle extends ModelDriveable
 		flip(leftAnimTrackModel2);
 		flip(rightAnimTrackModel3);
 		flip(leftAnimTrackModel3);
-		for(ModelRendererTurbo[] latm : leftAnimTrackModel)
-			flip(latm);
-		for(ModelRendererTurbo[] ratm : rightAnimTrackModel)
-			flip(ratm);
-		flip(doorAnimModel);
 		flip(drakonArmModel);
 		flip(drakonRailModel);
 		flip(drakonDoorModel);
 		flip(drakonModel);
 		flip(drakonReloadModel);
+		for(ModelRendererTurbo[] latm : leftAnimTrackModel)
+			flip(latm);
+		for(ModelRendererTurbo[] ratm : rightAnimTrackModel)
+			flip(ratm);
+		flip(doorAnimModel);
+		flip(door2AnimModel);
+		flip(fancyTrackModel);
 	}	
 	
 	@Override
@@ -581,10 +644,12 @@ public class ModelVehicle extends ModelDriveable
 		for(ModelRendererTurbo[] ratm : rightAnimTrackModel)
 			translate(ratm, x, y, z);
 		translate(doorAnimModel, x,y,z);
+		translate(door2AnimModel, x,y,z);
 		translate(drakonArmModel, x, y, z);
 		translate(drakonRailModel, x, y, z);
 		translate(drakonDoorModel, x, y, z);
 		translate(drakonReloadModel, x, y, z);
 		translate(drakonModel, x, y, z);
+		translate(fancyTrackModel, x, y, z);
 	}
 }

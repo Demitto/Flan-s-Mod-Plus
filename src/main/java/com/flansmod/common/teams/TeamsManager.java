@@ -74,7 +74,7 @@ public class TeamsManager
 	// Player changeable stuff
 	public static boolean voting = false, explosions = true, driveablesBreakBlocks = true,
 			bombsEnabled = true, shellsEnabled = true, missilesEnabled = true, bulletsEnabled = true, forceAdventureMode = true, canBreakGuns = true, canBreakGlass = true,
-			armourDrops = true, vehiclesNeedFuel = true, overrideHunger = true;
+			armourDrops = true, vehiclesNeedFuel = true, overrideHunger = true, allowVehicleZoom = false;
 	
 	public static int weaponDrops = 1; //0 = no drops, 1 = drops, 2 = smart drops
 	//Life of certain entity types. 0 is eternal.

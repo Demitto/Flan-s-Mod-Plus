@@ -33,6 +33,7 @@ public class PacketDriveableControl extends PacketBase
 	public boolean reload;
 	public int stage;
 	public int stageDelay;
+	public String key;
 
 
 	
@@ -76,6 +77,7 @@ public class PacketDriveableControl extends PacketBase
 		stageDelay = driveable.reloadAnimTime;
 		canFire = driveable.canFireIT1;
 		reload = driveable.reloadingDrakon;
+		key = driveable.key;
 	}
 		
 	@Override
@@ -108,6 +110,8 @@ public class PacketDriveableControl extends PacketBase
     	data.writeInt(stageDelay);
     	data.writeBoolean(canFire);
     	data.writeBoolean(reload);
+    	writeUTF(data, key);
+
 	}
 
 	@Override
@@ -140,6 +144,7 @@ public class PacketDriveableControl extends PacketBase
 		stageDelay = data.readInt();
 		canFire = data.readBoolean();
 		reload = data.readBoolean();
+		key = readUTF(data);
 	}
 
 	@Override
@@ -171,6 +176,7 @@ public class PacketDriveableControl extends PacketBase
 		driveable.rotorAngle = rotorAngle;
 		driveable.prevRotorAngle = prevRotorAngle;
 		driveable.varFlare= flare;
+		driveable.key = key;
 		if(driveable.getDriveableType().IT1)
 		{
 			driveable.setIT1(canFire, reload, stage, stageDelay);

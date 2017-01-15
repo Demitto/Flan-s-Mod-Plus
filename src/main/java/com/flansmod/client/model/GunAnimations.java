@@ -1,5 +1,7 @@
 package com.flansmod.client.model;
 
+import java.util.Random;
+
 public class GunAnimations 
 {
 	public static GunAnimations defaults = new GunAnimations();
@@ -23,6 +25,9 @@ public class GunAnimations
 	public float minigunBarrelRotation = 0F;
 	public float minigunBarrelRotationSpeed = 0F;
 	
+	public int muzzleFlashTime = 0;
+	public int flashInt = 0;
+	
 	/** Melee animations */
 	public int meleeAnimationProgress = 0, meleeAnimationLength = 0;
 	
@@ -44,6 +49,11 @@ public class GunAnimations
 				pumping = true;	
 				lastPumped = pumped = -1F;
 			}
+		}
+		
+		if(muzzleFlashTime > 0)
+		{
+			muzzleFlashTime--;
 		}
 		
 		if(pumping)
@@ -81,6 +91,16 @@ public class GunAnimations
 		lastGunSlide = gunSlide = 1F;
 		timeUntilPump = pumpDelay;
 		timeToPumpFor = pumpTime;
+		muzzleFlashTime = 2;
+		
+		Random r = new Random();
+		int Low = -1;
+		int High = 3;
+		int result = r.nextInt(High-Low) + Low;
+		if(result == -1) result = 0;
+		if(result == 3) result = 2;
+		
+		flashInt = result;
 	}
 		
 	public void doReload(int reloadTime, int pumpDelay, int pumpTime)

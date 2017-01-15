@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
@@ -58,6 +59,7 @@ import com.flansmod.common.guns.raytracing.PlayerBulletHit;
 import com.flansmod.common.guns.raytracing.PlayerHitbox;
 import com.flansmod.common.guns.raytracing.PlayerSnapshot;
 import com.flansmod.common.network.PacketGunFire;
+import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketPlaySound;
 import com.flansmod.common.network.PacketReload;
 import com.flansmod.common.network.PacketSelectOffHandGun;
@@ -89,6 +91,8 @@ public class ItemGun extends Item implements IFlanItem
 	public int impactX = 0;
 	public int impactY = 0;
 	public int impactZ = 0;
+	
+
 
 	//public boolean sendPosToServer = false;
 
@@ -1023,6 +1027,7 @@ public class ItemGun extends Item implements IFlanItem
 			{
 				//Shoot
 				shoot(gunStack, gunType, world, bulletStack, entityplayer, left);
+
 				//Damage the bullet item
 				bulletStack.setItemDamage(bulletStack.getItemDamage() + 1);
 
@@ -1135,10 +1140,12 @@ public class ItemGun extends Item implements IFlanItem
 			entity.entityDropItem(dropStack, 0.5F);
 		}
 	}
+	
 
 	/** Method for shooting to avoid repeated code */
 	private void shoot(ItemStack stack, GunType gunType, World world, ItemStack bulletStack, EntityPlayer entityplayer, boolean left)
 	{
+		//flash(entityplayer);
 		ShootableType bullet = ((ItemShootable)bulletStack.getItem()).type;
 		// Play a sound if the previous sound has finished
 		if (soundDelay <= 0 && gunType.shootSound != null)
@@ -1157,6 +1164,7 @@ public class ItemGun extends Item implements IFlanItem
 			int   numBullets   = -1;
 			float spread = -1.0F;
 
+
 			if(shootableType instanceof BulletType)
 			{
 				if(gunType.allowNumBulletsByBulletType)
@@ -1168,6 +1176,7 @@ public class ItemGun extends Item implements IFlanItem
 					spread = ((BulletType) shootableType).bulletSpread;
 				}
 			}
+			
 
 			if(numBullets <= 0)
 			{
@@ -1339,7 +1348,8 @@ public class ItemGun extends Item implements IFlanItem
     {
     	return type.colour;
     }
-
+	
+	
 	public boolean isItemStackDamageable()
 	{
 		return true;

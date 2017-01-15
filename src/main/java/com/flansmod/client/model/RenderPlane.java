@@ -9,18 +9,25 @@ import net.minecraft.entity.item.EntityItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
 import net.minecraftforge.client.IItemRenderer;
+import net.minecraftforge.client.event.RenderPlayerEvent;
 
 import com.flansmod.client.FlansModResourceHandler;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.driveables.DriveablePart;
 import com.flansmod.common.driveables.DriveablePosition;
+import com.flansmod.common.driveables.EntityDriveable;
+import com.flansmod.common.driveables.EntitySeat;
 import com.flansmod.common.driveables.ShootPoint;
 import com.flansmod.common.driveables.EntityPlane;
 import com.flansmod.common.driveables.ItemPlane;
 import com.flansmod.common.driveables.PlaneType;
 import com.flansmod.common.driveables.Propeller;
 import com.flansmod.common.vector.Vector3f;
+import com.flansmod.common.vector.Quaternion;
+
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class RenderPlane extends Render implements IItemRenderer 
 {	
@@ -39,12 +46,6 @@ public class RenderPlane extends Render implements IItemRenderer
     		}
     	}
     	
-		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
-		GL11.glEnable(GL11.GL_BLEND);
-		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
-		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
     	bindEntityTexture(entityPlane);
     	PlaneType type = entityPlane.getPlaneType();
         GL11.glPushMatrix();
@@ -206,9 +207,6 @@ public class RenderPlane extends Render implements IItemRenderer
 			GL11.glColor4f(1F, 1F, 1F, 1F);
 		}
         GL11.glPopMatrix();
-
-		GL11.glBlendFunc(srcBlend, dstBlend);
-		GL11.glDisable(GL11.GL_BLEND);
     }
     
     public Vector3f getRenderPosition(Vector3f current, Vector3f previous, float f)
@@ -252,12 +250,6 @@ public class RenderPlane extends Render implements IItemRenderer
 	@Override
 	public void renderItem(ItemRenderType type, ItemStack item, Object... data) 
 	{
-		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
-		GL11.glEnable(GL11.GL_BLEND);
-		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
-		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
 		GL11.glPushMatrix();
 		if(item != null && item.getItem() instanceof ItemPlane)
 		{
@@ -300,8 +292,62 @@ public class RenderPlane extends Render implements IItemRenderer
 			}
 		}
 		GL11.glPopMatrix();
-
-		GL11.glBlendFunc(srcBlend, dstBlend);
-		GL11.glDisable(GL11.GL_BLEND);
 	}
+<<<<<<< HEAD
+	
+	//Broken method to try and rotate playermodel, will fix later.
+	//TODO: Make this work
+=======
+
+	//Non-functional method to rotate player model. Rework
+>>>>>>> origin/master
+	/**
+    @SubscribeEvent
+    public void preRenderLiving(RenderPlayerEvent.Pre event)
+    {
+    	if(event.entity.ridingEntity instanceof EntitySeat)
+    	{
+    		EntityDriveable driveable = ((EntitySeat)event.entity.ridingEntity).driveable;
+    		
+    		if(driveable instanceof EntityPlane)
+    		{
+    			EntityPlane entityPlane = ((EntityPlane)driveable);
+				Quaternion quat = new Quaternion();
+				quat.setFromMatrix(entityPlane.axes.getMatrix());
+    			
+				GL11.glPushMatrix();
+				float dYaw = (entityPlane.axes.getYaw() - entityPlane.prevRotationYaw);
+				for(; dYaw > 180F; dYaw -= 360F) {}
+				for(; dYaw <= -180F; dYaw += 360F) {}
+				float dPitch = (entityPlane.axes.getPitch() - entityPlane.prevRotationPitch);
+				for(; dPitch > 180F; dPitch -= 360F) {}
+				for(; dPitch <= -180F; dPitch += 360F) {}
+				float dRoll = (entityPlane.axes.getRoll() - entityPlane.prevRotationRoll);
+				for(; dRoll > 180F; dRoll -= 360F) {}
+				for(; dRoll <= -180F; dRoll += 360F) {}
+				GL11.glRotatef(180F - entityPlane.prevRotationYaw - dYaw * event.partialRenderTick, 0.0F, 1.0F, 0.0F);
+				GL11.glRotatef(-entityPlane.prevRotationPitch + dPitch * event.partialRenderTick, 0.0F, 0.0F, 1.0F);
+				GL11.glRotatef(entityPlane.prevRotationRoll + dRoll * event.partialRenderTick, 1.0F, 0.0F, 0.0F);
+				
+				//GL11.glRotatef(quat.getW(), quat.getX(), quat.getY(), quat.getZ());
+
+    		}
+    	}
+    }
+    
+    @SubscribeEvent
+    public void postRenderLiving(RenderPlayerEvent.Post event)
+    {
+    	if(event.entity.ridingEntity instanceof EntitySeat)
+    	{
+    		EntityDriveable driveable = ((EntitySeat)event.entity.ridingEntity).driveable;
+    		
+    		if(driveable instanceof EntityPlane)
+    		{
+				GL11.glPopMatrix();
+    		}
+    	}
+    }
+    */
+
 }

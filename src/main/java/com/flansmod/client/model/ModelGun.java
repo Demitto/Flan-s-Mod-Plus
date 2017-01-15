@@ -1,6 +1,9 @@
 package com.flansmod.client.model;
 
+import org.lwjgl.opengl.GL11;
+
 import net.minecraft.client.model.ModelBase;
+import net.minecraft.client.renderer.OpenGlHelper;
 
 import com.flansmod.client.tmt.ModelRendererTurbo;
 import com.flansmod.common.vector.Vector3f;
@@ -36,6 +39,29 @@ public class ModelGun extends ModelBase
 	public Vector3f scopeAttachPoint = new Vector3f();
 	public Vector3f stockAttachPoint = new Vector3f();
 	public Vector3f gripAttachPoint = new Vector3f();
+	
+	//Muzzle flash models
+	public ModelRendererTurbo flashModel[][] = new ModelRendererTurbo[0][0];
+	public Vector3f muzzleFlashPoint = new Vector3f(0,0,0);
+	public boolean hasFlash = false;
+	
+	//Arms rendering
+	public boolean hasArms = false;
+	public Vector3f leftArmPos = new Vector3f(0,0,0);
+	public Vector3f leftArmRot = new Vector3f(0,0,0);
+	public Vector3f leftArmScale = new Vector3f(1,1,1);
+	
+	public Vector3f rightArmPos = new Vector3f(0,0,0);
+	public Vector3f rightArmRot = new Vector3f(0,0,0);
+	public Vector3f rightArmScale = new Vector3f(1,1,1);
+	
+	public Vector3f rightArmReloadPos = new Vector3f(0,0,0);
+	public Vector3f rightArmReloadRot = new Vector3f(0,0,0);
+	public Vector3f leftArmReloadPos = new Vector3f(0,0,0);
+	public Vector3f leftArmReloadRot = new Vector3f(0,0,0);
+	
+	public boolean rightHandAmmo = false;
+	public boolean leftHandAmmo = false;
 	
 	//Various animation parameters
 	public float gunSlideDistance = 1F / 4F;
@@ -89,6 +115,51 @@ public class ModelGun extends ModelBase
 	
 	/** This offsets the render position for item frames */
 	public Vector3f itemFrameOffset = new Vector3f();
+	
+	//lighting stuff
+	private static float lightmapLastX;
+    private static float lightmapLastY;
+	private static boolean optifineBreak = false;
+	
+	public static void glowOn()
+	{
+		glowOn(15);
+	}
+	
+    public static void glowOn(int glow)
+    {
+        GL11.glPushAttrib(GL11.GL_LIGHTING_BIT);
+        
+        GL11.glEnable(GL11.GL_BLEND);
+        //GL11.glDisable(GL11.GL_ALPHA_TEST);
+        GL11.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE);
+        
+        try {
+        	lightmapLastX = OpenGlHelper.lastBrightnessX;
+        	lightmapLastY = OpenGlHelper.lastBrightnessY;
+        } catch(NoSuchFieldError e) {
+        	optifineBreak = true;
+        }
+        
+        float glowRatioX = Math.min((glow/15F)*240F + lightmapLastX, 240);
+        float glowRatioY = Math.min((glow/15F)*240F + lightmapLastY, 240);
+        
+        if(!optifineBreak)
+        {
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, glowRatioX, glowRatioY);        	
+        }
+    }
+
+    public static void glowOff() 
+    {
+        GL11.glEnable(GL11.GL_LIGHTING);
+    	if(!optifineBreak)
+    	{
+    		OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, lightmapLastX, lightmapLastY);
+    	}
+    	
+        GL11.glPopAttrib();
+    }
 	
 	public void renderGun(float f)
 	{
@@ -148,6 +219,17 @@ public class ModelGun extends ModelBase
 	public void renderBreakAction(float f)
 	{
 		render(breakActionModel, f);
+	}
+	
+	public void renderFlash (float f, int i)
+	{
+		if(hasFlash)
+		{
+			glowOn();
+			if(flashModel[i] != null)
+			render(flashModel[i], f);
+			glowOff();
+		}
 	}
 
 

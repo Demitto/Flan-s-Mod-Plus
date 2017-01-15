@@ -42,7 +42,7 @@ public class EntityFlash extends EntityFX
         //func_98187_b() = bindTexture();
     	FMLClientHandler.instance().getClient().renderEngine.bindTexture(icon);
 
-        float scale = 5F;
+        float scale = 1F;
         float xPos = (float) (this.prevPosX + (this.posX - this.prevPosX) * (double) par2 - interpPosX);
         float yPos = (float) (this.prevPosY + (this.posY - this.prevPosY) * (double) par2 - interpPosY);
         float zPos = (float) (this.prevPosZ + (this.posZ - this.prevPosZ) * (double) par2 - interpPosZ);

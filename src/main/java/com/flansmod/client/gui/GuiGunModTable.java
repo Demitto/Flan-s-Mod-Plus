@@ -11,6 +11,7 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
+import net.minecraftforge.client.IItemRenderer.ItemRenderType;
 
 import com.flansmod.client.ClientProxy;
 import com.flansmod.client.model.GunAnimations;
@@ -55,7 +56,7 @@ public class GuiGunModTable extends GuiContainer
         		GL11.glRotatef(160, 1F, 0F, 0F);
         		GL11.glRotatef(20, 0F, 1F, 0F);
         		GL11.glScalef(-50F, 50F, 50F);
-        		ClientProxy.gunRenderer.renderGun(gunStack, gunType, 1F / 16F, gunType.model, GunAnimations.defaults, 0F);
+        		ClientProxy.gunRenderer.renderGun(gunStack, gunType, 1F / 16F, gunType.model, GunAnimations.defaults, 0F, ItemRenderType.ENTITY);
         		GL11.glPopMatrix();
         	}
         }

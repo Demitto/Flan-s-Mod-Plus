@@ -102,7 +102,9 @@ public class ModelMecha extends ModelDriveable
         	for(ModelRendererTurbo model : headModel)
         		model.render(f5);
 
-		float pitch = mecha.seats[0] == null ? 0F : mecha.seats[0].looking.getPitch();
+		float pitch = mecha.seats[0].looking.getPitch();
+		float dPitch = (mecha.seats[0].looking.getPitch() - mecha.seats[0].prevLooking.getPitch());
+		float aPitch = mecha.seats[0].prevLooking.getPitch() + dPitch * f;
         
         if(mecha.isPartIntact(EnumDriveablePart.barrel))
         {

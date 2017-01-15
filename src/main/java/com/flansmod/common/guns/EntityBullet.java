@@ -29,6 +29,7 @@ import net.minecraft.util.MathHelper;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
+import net.minecraftforge.client.event.RenderHandEvent;
 
 import com.flansmod.client.FlansModClient;
 import com.flansmod.client.debug.EntityDebugDot;
@@ -57,6 +58,7 @@ import com.flansmod.common.types.InfoType;
 import com.flansmod.common.vector.Vector3f;
 
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.common.registry.IEntityAdditionalSpawnData;
@@ -107,6 +109,14 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
 	public int submunitionDelay = 20;
 	public boolean hasSetSubDelay = false;
+	
+	public boolean hasSetVLSDelay = false;
+	public int VLSDelay = 0;
+	
+	public Vector3f lookVector;
+	public Vector3f initialPos;
+	public boolean hasSetLook = false;
+	
 
 	public EntityBullet(World world)
 	{
@@ -269,16 +279,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 			return;
 		}
 
-		if(owner != null && type.manualGuidance)
-		{
-			this.rotationYaw = owner.rotationYaw;
-			this.rotationPitch = owner.rotationPitch;
-			double dist = MathHelper.sqrt_double( motionX*motionX + motionY*motionY + motionZ*motionZ );
-			final float PI = (float) Math.PI;
-			motionX = dist * -MathHelper.sin((rotationYaw   / 180F) * PI) * MathHelper.cos((rotationPitch / 180F) * PI);
-			motionZ = dist *  MathHelper.cos((rotationYaw   / 180F) * PI) * MathHelper.cos((rotationPitch / 180F) * PI);
-			motionY = dist * -MathHelper.sin((rotationPitch / 180F) * PI);
-		}
 
 		if(type.despawnTime > 0 && ticksExisted > type.despawnTime)
 		{
@@ -293,6 +293,24 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 		} else if(type.hasSubmunitions){
 			submunitionDelay --;
 		}
+		
+		if(!hasSetVLSDelay && type.VLS)
+		{
+			VLSDelay = type.VLSTime;
+			hasSetVLSDelay = true;
+		}
+		
+		if(VLSDelay > 0)
+			VLSDelay--;
+		
+		if(!hasSetLook && owner != null)
+		{
+			lookVector = new Vector3f((float)owner.getLookVec().xCoord, (float)owner.getLookVec().yCoord,(float)owner.getLookVec().zCoord);
+			initialPos = new Vector3f(owner.posX, owner.posY, owner.posZ);
+			hasSetLook = true;
+		}
+		
+		
 
 		if(soundTime > 0)
 			soundTime--;
@@ -363,6 +381,14 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 					}
 					if(obj instanceof EntityDriveable && getDistanceToEntity((Entity)obj) < type.driveableProximityTrigger)
 					{
+						/**
+						if(TeamsManager.getInstance() != null && TeamsManager.getInstance().currentRound != null && ((EntityDriveable)obj).seats[0].riddenByEntity instanceof EntityPlayerMP && owner instanceof EntityPlayer)
+						{
+							EntityPlayerMP player = (EntityPlayerMP)((EntityDriveable)obj).seats[0].riddenByEntity;
+							if(!TeamsManager.getInstance().currentRound.gametype.playerAttacked((EntityPlayerMP)obj, new EntityDamageSourceGun(type.shortName, this, (EntityPlayer)owner, type, false)))
+								continue;
+						}
+						*/
 						if(type.damageToTriggerer > 0)
 							((EntityDriveable)obj).attackEntityFrom(getBulletDamage(false), type.damageToTriggerer);
 						detonate();
@@ -477,7 +503,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 			else
 			{
 				Entity entity = (Entity)obj;
-				if(entity != this && entity != owner && !entity.isDead && !(entity instanceof EntityItem) && !(entity instanceof EntityXPOrb) && !(entity instanceof EntityArrow) && entity.getClass().getName().indexOf("mcheli.weapon") < 0 &&
+				if(entity != this && entity != owner && !entity.isDead && !(entity instanceof EntityItem) && !(entity instanceof EntityXPOrb) && !(entity instanceof EntityArrow) &&
 					(entity.getClass().toString().indexOf("flansmod.")<0 || entity instanceof EntityAAGun || entity instanceof EntityGrenade))
 				{
 					AxisAlignedBB bb = entity.boundingBox.addCoord(
@@ -746,14 +772,16 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 			for(int i = 0; i < 4; i++)
 			{
 				float bubbleMotion = 0.25F;
-				worldObj.spawnParticle("bubble", posX - motionX * bubbleMotion, posY - motionY * bubbleMotion, posZ - motionZ * bubbleMotion, motionX, motionY, motionZ);
+				worldObj.spawnParticle("bubble", posX - motionX * bubbleMotion, posY - motionY * bubbleMotion, posZ - motionZ * bubbleMotion, motionX, motionY + 0.1F, motionZ);
 			}
-			drag = type.dragInWater;
+			//drag = type.dragInWater;
 		}
+		if(!isInWater() || !type.torpedo){
 		motionX *= drag;
 		motionY *= drag;
 		motionZ *= drag;
 		motionY -= gravity * type.fallSpeed;
+		}
 
 		// Apply homing action
 		if(lockedOnTo != null)
@@ -911,13 +939,86 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 				this.motionZ = 0;
 			}
 		}
+		this.renderDistanceWeight = 256D;
+		if(owner != null && type.manualGuidance && VLSDelay <= 0 && lockedOnTo == null)
+		{
+
+			this.renderDistanceWeight = 256D;
+			/**
+			boolean beamRider = true;
+			if(!beamRider)
+			{
+				this.rotationYaw = owner.rotationYaw;
+				this.rotationPitch = owner.rotationPitch;
+				double dist = MathHelper.sqrt_double( motionX*motionX + motionY*motionY + motionZ*motionZ );
+				final float PI = (float) Math.PI;
+				motionX = dist * -MathHelper.sin((rotationYaw   / 180F) * PI) * MathHelper.cos((rotationPitch / 180F) * PI)*1.02;
+				motionZ = dist *  MathHelper.cos((rotationYaw   / 180F) * PI) * MathHelper.cos((rotationPitch / 180F) * PI)*1.02;
+				motionY = dist * -MathHelper.sin((rotationPitch / 180F) * PI)*1.02;
+			} else 
+			*/
+
+				Vector3f lookVec;
+				Vector3f origin2;
+				lookVec = new Vector3f((float)owner.getLookVec().xCoord, (float)owner.getLookVec().yCoord,(float)owner.getLookVec().zCoord);
+				origin2 = new Vector3f(owner.posX, owner.posY, owner.posZ);
+
+				if(type.fixedDirection)
+				{
+					lookVec = lookVector;
+					origin2 = initialPos;	
+				}
+				float x = (float)(posX - origin2.x);
+				float y = (float)(posY - origin2.y);
+				float z = (float)(posZ - origin2.z);
+				
+				float d = (float)Math.sqrt((x*x) + (y*y) + (z*z));
+				d = d+type.turnRadius;
+				
+				lookVec.normalise();
+				
+				Vector3f targetPoint = new Vector3f(origin2.x + (lookVec.x*d), origin2.y + (lookVec.y*d), origin2.z + (lookVec.z*d));
+				//FlansMod.proxy.spawnParticle("explode", targetPoint.x,targetPoint.y,targetPoint.z, 0,0,0);
+				//double dX = owner.posX - this.posX;
+				//double dY = owner.posY - this.posY;
+				//double dZ = owner.posZ - this.posZ;
+				//targetPoint = new Vector3f(owner.posX, owner.posY, owner.posZ);
+				
+				Vector3f diff = Vector3f.sub(targetPoint, new Vector3f(posX, posY, posZ), null);
+
+				float speed2 = type.trackPhaseSpeed;
+				float turnSpeed = type.trackPhaseTurn;
+				diff.normalise();
+				turnSpeed = 0.1F;
+				Vector3f targetSpeed = new Vector3f(diff.x * speed2, diff.y * speed2, diff.z * speed2);
+				
+				this.motionX += (targetSpeed.x - motionX) * turnSpeed;
+				this.motionY += (targetSpeed.y - motionY) * turnSpeed;
+				this.motionZ += (targetSpeed.z - motionZ) * turnSpeed;
+				
+				//this.rotationYaw = owner.rotationYaw;
+				//this.rotationPitch = owner.rotationPitch;
+		}
+		
+		
+		if(type.torpedo)
+		{
+			if(isInWater()){
+				Vector3f motion2 = new Vector3f(motionX, motionY, motionZ);
+				float length = motion.length();
+				motion.normalise();
+				motionY *= 0.3F;
+				motionX = motion.x * 1;
+				motionZ = motion.z * 1;
+			}
+		}
 
 
 		//Apply motion
-		posX += motionX;
-		posY += motionY;
-		posZ += motionZ;
-		setPosition(posX, posY, posZ);
+		//posX += motionX;
+		//posY += motionY;
+		//posZ += motionZ;
+		setPosition(posX + motionX, posY + motionY, posZ + motionZ);
 
 		//Recalculate the angles from the new motion
 		float motionXZ = MathHelper.sqrt_double(motionX * motionX + motionZ * motionZ);
@@ -950,14 +1051,27 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 		double dZ = (posZ - prevPosZ) / 10;
 
 		float spread = 0.1F;
-		for (int i = 0; i < 10; i++)
-		{
-			EntityFX particle = FlansModClient.getParticle(type.trailParticleType, worldObj, prevPosX + dX * i + rand.nextGaussian() * spread, prevPosY + dY * i + rand.nextGaussian() * spread, prevPosZ + dZ * i + rand.nextGaussian() * spread);
-			if(particle != null && Minecraft.getMinecraft().gameSettings.fancyGraphics)
-				particle.renderDistanceWeight = 100D;
-			//worldObj.spawnEntityInWorld(particle);
+		if(VLSDelay > 0 && type.boostPhaseParticle != null){
+			for (int i = 0; i < 10; i++)
+			{			
+				FlansMod.proxy.spawnParticle(type.boostPhaseParticle,
+						prevPosX + dX * i + rand.nextGaussian() * spread, prevPosY + dY * i + rand.nextGaussian() * spread, prevPosZ + dZ * i + rand.nextGaussian() * spread,
+						0,0,0);
+			}
+		} else if (!type.VLS ||(VLSDelay <= 0)){
+			for (int i = 0; i < 10; i++)
+			{
+				//EntityFX particle = FlansModClient.getParticle("flansmod.rocketexhaust", worldObj, prevPosX + dX * i + rand.nextGaussian() * spread, prevPosY + dY * i + rand.nextGaussian() * spread, prevPosZ + dZ * i + rand.nextGaussian() * spread);
+				//if(particle != null && Minecraft.getMinecraft().gameSettings.fancyGraphics)
+					//particle.renderDistanceWeight = 100D;
+				//worldObj.spawnEntityInWorld(particle);
+				FlansMod.proxy.spawnParticle("flansmod.fmflame",
+						prevPosX + dX * i + rand.nextGaussian() * spread, prevPosY + dY * i + rand.nextGaussian() * spread, prevPosZ + dZ * i + rand.nextGaussian() * spread,
+						0,0,0);
+			}
+			
 		}
-		FlansMod.proxy.spawnParticle("explode", prevPosX + dX, prevPosY + dY, prevPosY + dY, (float)Math.random()*1, (float)Math.random()*1, (float)Math.random()*1);
+		//FlansMod.proxy.spawnParticle("explode", prevPosX + dX, prevPosY + dY, prevPosZ + dZ, motionX + (float)Math.random()*1 - 0.5, motionY + (float)Math.random()*1 - 0.5, motionZ +(float)Math.random()*1 - 0.5);
 
 	}
 
@@ -1062,6 +1176,41 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 			}
 		}
 	}
+	
+	public float moveToTarget(float current, float target, float speed)
+	{	
+
+		float pitchToMove = (float)((Math.sqrt(target*target)) - Math.sqrt((current*current)));
+		for(; pitchToMove > 180F; pitchToMove -= 360F) {}
+		for(; pitchToMove <= -180F; pitchToMove += 360F) {}
+		
+		float signDeltaY = 0;
+		if(pitchToMove > speed){
+			signDeltaY = 1;
+		} else if(pitchToMove < -speed){
+			signDeltaY = -1;
+		} else {
+			signDeltaY = 0;
+			return target;
+		}
+		
+		
+		if(current > target)
+		{
+			current = current - speed;
+		}
+		
+		else if(current < target)
+		{
+			current = current + speed;
+		}
+		
+		
+		
+		return current;
+	}
+
+
 
 	public void detonate()
 	{

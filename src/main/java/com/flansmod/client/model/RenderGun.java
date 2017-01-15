@@ -3,6 +3,7 @@ package com.flansmod.client.model;
 import org.lwjgl.opengl.GL11;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.ModelBiped;
 import net.minecraft.client.renderer.RenderBlocks;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.entity.EntityLivingBase;
@@ -11,6 +12,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MathHelper;
 import net.minecraftforge.client.IItemRenderer;
+import net.minecraftforge.client.event.RenderHandEvent;
 
 import com.flansmod.client.FlansModClient;
 import com.flansmod.client.FlansModResourceHandler;
@@ -24,6 +26,7 @@ import com.flansmod.common.guns.ItemBullet;
 import com.flansmod.common.guns.ItemGun;
 import com.flansmod.common.vector.Vector3f;
 
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
 
 public class RenderGun implements IItemRenderer
@@ -31,6 +34,7 @@ public class RenderGun implements IItemRenderer
 	private static TextureManager renderEngine;
 	
 	public static float smoothing;
+
 	
 	@Override
 	public boolean handleRenderType(ItemStack item, ItemRenderType type) 
@@ -58,6 +62,7 @@ public class RenderGun implements IItemRenderer
 			return;
 		
 		RenderBlocks renderBlocks = (RenderBlocks)data[0];
+
 		
 		
 		GunType gunType = ((ItemGun)item.getItem()).type;
@@ -128,12 +133,6 @@ public class RenderGun implements IItemRenderer
 		
 		int flip = offHand ? -1 : 1;
 		
-		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
-		GL11.glEnable(GL11.GL_BLEND);
-		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
-		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
 		GL11.glPushMatrix();
 		{
 			//Get the reload animation rotation
@@ -182,13 +181,9 @@ public class RenderGun implements IItemRenderer
 					if(FlansModClient.zoomProgress > 0.9F && scope.hasZoomOverlay())
 					{
 						GL11.glPopMatrix();
-
-						GL11.glBlendFunc(srcBlend, dstBlend);
-						GL11.glDisable(GL11.GL_BLEND);
 						return;
 					}
 					float adsSwitch = FlansModClient.lastZoomProgress + (FlansModClient.zoomProgress - FlansModClient.lastZoomProgress) * smoothing;//0F;//((float)Math.sin((FlansMod.ticker) / 10F) + 1F) / 2F;
-					
 					if(offHand)
 					{
 						GL11.glTranslatef(0F, 0.03F, -0.76F);
@@ -321,17 +316,19 @@ public class RenderGun implements IItemRenderer
 				default : break;
 			}
 			
-			renderGun(item, gunType, f, model, animations, reloadRotate);
+			renderGun(item, gunType, f, model, animations, reloadRotate, type);
 		}
 		GL11.glPopMatrix();
-
-		GL11.glBlendFunc(srcBlend, dstBlend);
-		GL11.glDisable(GL11.GL_BLEND);
 	}
 	
 	/** Gun render method, seperated from transforms so that mecha renderer may also call this */
-	public void renderGun(ItemStack item, GunType type, float f, ModelGun model, GunAnimations animations, float reloadRotate)
+	public void renderGun(ItemStack item, GunType type, float f, ModelGun model, GunAnimations animations, float reloadRotate, ItemRenderType rtype)
 	{
+		GL11.glPushMatrix();
+		if(rtype == ItemRenderType.EQUIPPED_FIRST_PERSON)
+		{
+			GL11.glTranslatef(0F, 0, 0);
+		}
 		//Make sure we actually have the renderEngine
 		if(renderEngine == null)
 			renderEngine = Minecraft.getMinecraft().renderEngine;
@@ -356,7 +353,14 @@ public class RenderGun implements IItemRenderer
 		}
 				
 		//Load texture
+		if(rtype == ItemRenderType.EQUIPPED_FIRST_PERSON && model.hasArms)
+		{
+			Minecraft mc = Minecraft.getMinecraft();
+			renderFirstPersonArm(mc.thePlayer, model, animations);
+		}
 		renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(type.getPaintjob(item.stackTagCompound.getString("Paint"))));
+		
+
 		
 		if(scopeAttachment != null)
 			GL11.glTranslatef(0F, -scopeAttachment.model.renderOffset / 16F, 0F);
@@ -375,6 +379,14 @@ public class RenderGun implements IItemRenderer
 				model.renderDefaultStock(f);
 			if(gripAttachment == null && !model.gripIsOnPump)
 				model.renderDefaultGrip(f);
+			
+			if(animations.muzzleFlashTime> 0)
+			{
+				GL11.glPushMatrix();
+				GL11.glTranslated(model.muzzleFlashPoint.x, model.muzzleFlashPoint.y, model.muzzleFlashPoint.z);
+				model.renderFlash(f, animations.flashInt);
+				GL11.glPopMatrix();
+			}
 			
 			//Render various shoot / reload animated parts
 			//Render the slide
@@ -467,7 +479,6 @@ public class RenderGun implements IItemRenderer
 						clipPosition = (effectiveReloadAnimationProgress - model.tiltGunTime) / model.unloadClipTime;
 					if(effectiveReloadAnimationProgress >= model.tiltGunTime + model.unloadClipTime && effectiveReloadAnimationProgress < model.tiltGunTime + model.unloadClipTime + model.loadClipTime)
 						clipPosition = 1F - (effectiveReloadAnimationProgress - (model.tiltGunTime + model.unloadClipTime)) / model.loadClipTime;
-					
 					float loadOnlyClipPosition = Math.max(0F, Math.min(1F, 1F - ((effectiveReloadAnimationProgress - model.tiltGunTime) / (model.unloadClipTime + model.loadClipTime))));
 					
 					//Rotate the gun dependent on the animation type
@@ -478,7 +489,7 @@ public class RenderGun implements IItemRenderer
 							GL11.glTranslatef(model.barrelBreakPoint.x, model.barrelBreakPoint.y, model.barrelBreakPoint.z);
 							GL11.glRotatef(reloadRotate * -model.breakAngle, 0F, 0F, 1F);
 							GL11.glTranslatef(-model.barrelBreakPoint.x, -model.barrelBreakPoint.y, -model.barrelBreakPoint.z);
-							GL11.glTranslatef(-1F * clipPosition, 0F, 0F);
+							GL11.glTranslatef(-1F * clipPosition * 1/type.modelScale, 0F, 0F);
 							break;
 						}
 						case REVOLVER :
@@ -486,7 +497,7 @@ public class RenderGun implements IItemRenderer
 							GL11.glTranslatef(model.revolverFlipPoint.x, model.revolverFlipPoint.y, model.revolverFlipPoint.z);
 							GL11.glRotatef(reloadRotate * model.revolverFlipAngle, 1F, 0F, 0F);
 							GL11.glTranslatef(-model.revolverFlipPoint.x, -model.revolverFlipPoint.y, -model.revolverFlipPoint.z);
-							GL11.glTranslatef(-1F * clipPosition, 0F, 0F);
+							GL11.glTranslatef(-1F * clipPosition * 1/type.modelScale, 0F, 0F);
 							break;
 						}
 
@@ -495,7 +506,7 @@ public class RenderGun implements IItemRenderer
 							GL11.glTranslatef(model.revolver2FlipPoint.x, model.revolver2FlipPoint.y, model.revolver2FlipPoint.z);
 							GL11.glRotatef(reloadRotate * model.revolver2FlipAngle, -1F, 0F, 0F);
 							GL11.glTranslatef(-model.revolver2FlipPoint.x, -model.revolver2FlipPoint.y, -model.revolver2FlipPoint.z);
-							GL11.glTranslatef(-1F * clipPosition, 0F, 0F);
+							GL11.glTranslatef(-1F * clipPosition * 1/type.modelScale, 0F, 0F);
 							break;
 						}
 
@@ -503,40 +514,40 @@ public class RenderGun implements IItemRenderer
 						{
 							GL11.glRotatef(-180F * clipPosition, 0F, 0F, 1F);
 							GL11.glRotatef(60F * clipPosition, 1F, 0F, 0F);
-							GL11.glTranslatef(0.5F * clipPosition, 0F, 0F);
+							GL11.glTranslatef(0.5F * clipPosition * 1/type.modelScale, 0F, 0F);
 							break;
 						}
 						case PISTOL_CLIP :
 						{
 							GL11.glRotatef(-90F * clipPosition * clipPosition, 0F, 0F, 1F);
-							GL11.glTranslatef(0F, -1F * clipPosition, 0F);
+							GL11.glTranslatef(0F, -1F * clipPosition * 1/type.modelScale, 0F);
 							break;
 						}
 						case ALT_PISTOL_CLIP :
 						{
 							GL11.glRotatef(5F * clipPosition, 0F, 0F, 1F);
-							GL11.glTranslatef(0F, -3F * clipPosition, 0F);
+							GL11.glTranslatef(0F, -3F * clipPosition * 1/type.modelScale, 0F);
 							break;
 						}
 						case SIDE_CLIP : 
 						{
 							GL11.glRotatef(180F * clipPosition, 0F, 1F, 0F);
 							GL11.glRotatef(60F * clipPosition, 0F, 1F, 0F);
-							GL11.glTranslatef(0.5F * clipPosition, 0F, 0F);
+							GL11.glTranslatef(0.5F * clipPosition * 1/type.modelScale, 0F, 0F);
 							break;
 						}
 						case BULLPUP :
 						{
 							GL11.glRotatef(-150F * clipPosition, 0F, 0F, 1F);
 							GL11.glRotatef(60F * clipPosition, 1F, 0F, 0F);
-							GL11.glTranslatef(1F * clipPosition, -0.5F * clipPosition, 0F);
+							GL11.glTranslatef(1F * clipPosition * 1/type.modelScale, -0.5F * clipPosition * 1/type.modelScale, 0F);
 							break;
 						}
 						case P90 :
 						{
 							GL11.glRotatef(-15F * reloadRotate * reloadRotate, 0F, 0F, 1F);
 							GL11.glTranslatef(0F, 0.075F * reloadRotate, 0F);
-							GL11.glTranslatef(-2F * clipPosition, -0.3F * clipPosition, 0.5F * clipPosition);
+							GL11.glTranslatef(-2F * clipPosition * 1/type.modelScale, -0.3F * clipPosition * 1/type.modelScale, 0.5F * clipPosition * 1/type.modelScale);
 							break;
 						}
 						case RIFLE : 
@@ -547,7 +558,7 @@ public class RenderGun implements IItemRenderer
 							
 							GL11.glRotatef(bulletProgress * 15F, 0F, 1F, 0F);
 							GL11.glRotatef(bulletProgress * 15F, 0F, 0F, 1F);
-							GL11.glTranslatef(bulletProgress * -1F, 0F, bulletProgress * 0.5F);
+							GL11.glTranslatef(bulletProgress * -1F * 1/type.modelScale, 0F, bulletProgress * 0.5F * 1/type.modelScale);
 							
 							break;
 						}
@@ -559,7 +570,7 @@ public class RenderGun implements IItemRenderer
 							
 							GL11.glRotatef(bulletProgress * 55F, 0F, 1F, 0F);
 							GL11.glRotatef(bulletProgress * 95F, 0F, 0F, 1F);
-							GL11.glTranslatef(bulletProgress * -0.1F, bulletProgress * 1F, bulletProgress * 0.5F);
+							GL11.glTranslatef(bulletProgress * -0.1F * 1/type.modelScale, bulletProgress * 1F * 1/type.modelScale, bulletProgress * 0.5F * 1/type.modelScale);
 							
 							break;
 						}
@@ -570,7 +581,7 @@ public class RenderGun implements IItemRenderer
 							float bulletProgress = thing - bulletNum;
 							
 							GL11.glRotatef(bulletProgress * -30F, 0F, 0F, 1F);
-							GL11.glTranslatef(bulletProgress * -0.5F, bulletProgress * -1F, 0F);
+							GL11.glTranslatef(bulletProgress * -0.5F * 1/type.modelScale, bulletProgress * -1F * 1/type.modelScale, 0F);
 							
 							break;
 						}
@@ -579,7 +590,7 @@ public class RenderGun implements IItemRenderer
 							GL11.glRotatef(model.rotateClipVertical * clipPosition, 0F, 0F, 1F);
 							GL11.glRotatef(model.rotateClipHorizontal * clipPosition, 0F, 1F, 0F);
 							GL11.glRotatef(model.tiltClip * clipPosition, 1F, 0F, 0F);
-							GL11.glTranslatef(model.translateClip.x * clipPosition,  model.translateClip.y * clipPosition, model.translateClip.z * clipPosition);
+							GL11.glTranslatef(model.translateClip.x * clipPosition * 1/type.modelScale,  model.translateClip.y * clipPosition * 1/type.modelScale, model.translateClip.z * clipPosition * 1/type.modelScale);
 							break;
 						}
 						case END_LOADED :
@@ -631,6 +642,13 @@ public class RenderGun implements IItemRenderer
 						default : break;
 					}
 				}
+				if(rtype == ItemRenderType.EQUIPPED_FIRST_PERSON && model.hasArms)
+				{
+					Minecraft mc = Minecraft.getMinecraft();
+					renderAnimArm(mc.thePlayer, model, type, animations);
+				}
+				renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(type.getPaintjob(item.stackTagCompound.getString("Paint"))));
+
 
 				if(shouldRender)
 					model.renderAmmo(f);
@@ -714,5 +732,108 @@ public class RenderGun implements IItemRenderer
 			}
 			GL11.glPopMatrix();
 		}
+		GL11.glPopMatrix();
 	}
+	
+    private void renderFirstPersonArm(EntityPlayer player, ModelGun model,  GunAnimations anim)
+    {
+    	Minecraft mc = Minecraft.getMinecraft();
+    	ModelBiped modelBipedMain = new ModelBiped(0.0F);
+        mc.renderEngine.bindTexture(mc.thePlayer.getLocationSkin());
+
+        float f = 1.0F;
+        GL11.glColor3f(f, f, f);
+        modelBipedMain.onGround = 0.0F;
+        GL11.glPushMatrix();
+        if(!anim.reloading)
+        {
+	        GL11.glRotatef(model.rightArmRot.y, 0F, 1F, 0F);
+	        GL11.glRotatef(model.rightArmRot.z, 0F, 0F, 1F);
+	        GL11.glRotatef(model.rightArmRot.x, 1F, 0F, 0F);
+	        GL11.glTranslatef(model.rightArmPos.x, model.rightArmPos.y, model.rightArmPos.z);
+        } else {
+	        GL11.glRotatef(model.rightArmReloadRot.y, 0F, 1F, 0F);
+	        GL11.glRotatef(model.rightArmReloadRot.z, 0F, 0F, 1F);
+	        GL11.glRotatef(model.rightArmReloadRot.x, 1F, 0F, 0F);
+	        GL11.glTranslatef(model.rightArmReloadPos.x, model.rightArmReloadPos.y, model.rightArmReloadPos.z);
+        }
+        GL11.glScalef(model.rightArmScale.x,model.rightArmScale.y,model.rightArmScale.z);
+        modelBipedMain.setRotationAngles(0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0625F, player);
+        modelBipedMain.bipedRightArm.offsetY = 0F;
+        if(!model.rightHandAmmo)
+        modelBipedMain.bipedRightArm.render(0.0625F);
+        GL11.glPopMatrix();
+        
+        GL11.glPushMatrix();
+        if(!anim.reloading)
+        {
+	        GL11.glRotatef(model.leftArmRot.y, 0F, 1F, 0F);
+	        GL11.glRotatef(model.leftArmRot.z, 0F, 0F, 1F);
+	        GL11.glRotatef(model.leftArmRot.x, 1F, 0F, 0F);
+	        GL11.glTranslatef(model.leftArmPos.x, model.leftArmPos.y, model.leftArmPos.z);
+        } else {
+	        GL11.glRotatef(model.leftArmReloadRot.y, 0F, 1F, 0F);
+	        GL11.glRotatef(model.leftArmReloadRot.z, 0F, 0F, 1F);
+	        GL11.glRotatef(model.leftArmReloadRot.x, 1F, 0F, 0F);
+	        GL11.glTranslatef(model.leftArmReloadPos.x, model.leftArmReloadPos.y, model.leftArmReloadPos.z);
+        }
+        GL11.glScalef(model.leftArmScale.x,model.leftArmScale.y,model.leftArmScale.z);
+        modelBipedMain.bipedLeftArm.offsetY = 0F;
+        if(!model.leftHandAmmo)
+        modelBipedMain.bipedLeftArm.render(0.0625F);
+        GL11.glPopMatrix();
+    }
+    
+    private void renderAnimArm(EntityPlayer player, ModelGun model, GunType type, GunAnimations anim)
+    {
+    	Minecraft mc = Minecraft.getMinecraft();
+    	ModelBiped modelBipedMain = new ModelBiped(0.0F);
+        mc.renderEngine.bindTexture(mc.thePlayer.getLocationSkin());
+        GL11.glPushMatrix();
+        GL11.glScalef(1/type.modelScale, 1/type.modelScale, 1/type.modelScale);
+        float f = 1.0F;
+        GL11.glColor3f(f, f, f);
+        modelBipedMain.onGround = 0.0F;
+        GL11.glPushMatrix();
+        if(!anim.reloading)
+        {
+	        GL11.glRotatef(model.rightArmRot.y, 0F, 1F, 0F);
+	        GL11.glRotatef(model.rightArmRot.z, 0F, 0F, 1F);
+	        GL11.glRotatef(model.rightArmRot.x, 1F, 0F, 0F);
+	        GL11.glTranslatef(model.rightArmPos.x, model.rightArmPos.y, model.rightArmPos.z);
+        } else {
+	        GL11.glRotatef(model.rightArmReloadRot.y, 0F, 1F, 0F);
+	        GL11.glRotatef(model.rightArmReloadRot.z, 0F, 0F, 1F);
+	        GL11.glRotatef(model.rightArmReloadRot.x, 1F, 0F, 0F);
+	        GL11.glTranslatef(model.rightArmReloadPos.x, model.rightArmReloadPos.y, model.rightArmReloadPos.z);
+        }
+        GL11.glScalef(model.rightArmScale.x,model.rightArmScale.y,model.rightArmScale.z);
+        modelBipedMain.setRotationAngles(0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0625F, player);
+        modelBipedMain.bipedRightArm.offsetY = 0F;
+        if(model.rightHandAmmo)
+        modelBipedMain.bipedRightArm.render(0.0625F);
+        GL11.glPopMatrix();
+        
+        GL11.glPushMatrix();
+        if(!anim.reloading)
+        {
+	        GL11.glRotatef(model.leftArmRot.y, 0F, 1F, 0F);
+	        GL11.glRotatef(model.leftArmRot.z, 0F, 0F, 1F);
+	        GL11.glRotatef(model.leftArmRot.x, 1F, 0F, 0F);
+	        GL11.glTranslatef(model.leftArmPos.x, model.leftArmPos.y, model.leftArmPos.z);
+        } else {
+	        GL11.glRotatef(model.leftArmReloadRot.y, 0F, 1F, 0F);
+	        GL11.glRotatef(model.leftArmReloadRot.z, 0F, 0F, 1F);
+	        GL11.glRotatef(model.leftArmReloadRot.x, 1F, 0F, 0F);
+	        GL11.glTranslatef(model.leftArmReloadPos.x, model.leftArmReloadPos.y, model.leftArmReloadPos.z);
+        }
+        GL11.glScalef(model.leftArmScale.x,model.leftArmScale.y,model.leftArmScale.z);
+        modelBipedMain.bipedLeftArm.offsetY = 0F;
+        if(model.leftHandAmmo)
+        modelBipedMain.bipedLeftArm.render(0.0625F);
+        GL11.glPopMatrix();
+        
+        GL11.glPopMatrix();
+    }
+	
 }

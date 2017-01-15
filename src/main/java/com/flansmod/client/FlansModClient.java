@@ -96,9 +96,6 @@ public class FlansModClient extends FlansMod
 	public static float antiRecoilYaw;
 
 	
-	//Gun animations
-	/** Gun animation variables for each entity holding a gun. Currently only applicable to the player */
-	public static HashMap<EntityLivingBase, GunAnimations> gunAnimationsRight = new HashMap<EntityLivingBase, GunAnimations>(), gunAnimationsLeft = new HashMap<EntityLivingBase, GunAnimations>();
 	
 	//Scope variables
 	/** A delayer on the scope button to avoid repeat presses */

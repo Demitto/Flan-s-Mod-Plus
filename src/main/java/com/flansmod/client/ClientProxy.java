@@ -364,7 +364,7 @@ public class ClientProxy extends CommonProxy
 	{
 		return FMLClientHandler.instance().getClient().thePlayer;
 	}
-
+	
 	@Override
 	public boolean isOnSameTeamClientPlayer(EntityLivingBase entity)
 	{
@@ -545,6 +545,21 @@ public class ClientProxy extends CommonProxy
 					if (p_72726_1_.equals("flansmod.debris1"))
 					{
 						entityfx = new EntityDebris1(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
+					}
+					
+					if (p_72726_1_.equals("flansmod.fmflame"))
+					{
+						entityfx = new EntityFMFlame(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
+					}
+					
+					if (p_72726_1_.equals("flansmod.fmsmoke"))
+					{
+						entityfx = new EntityFMSmoke(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
+					}
+					
+					if (p_72726_1_.equals("flansmod.rocketexhaust"))
+					{
+						entityfx = new EntityRocketexhaust(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
 					}
 					
 					if (p_72726_1_.equals("bubble"))

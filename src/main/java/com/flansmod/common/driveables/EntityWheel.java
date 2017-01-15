@@ -190,7 +190,7 @@ public class EntityWheel extends Entity implements IEntityAdditionalSpawnData
 		return Math.sqrt(motionX * motionX + motionZ * motionZ);
 	}
 	
-		public double getSpeedXYZ()
+	public double getSpeedXYZ()
 	{
 		return Math.cbrt(motionX * motionX + motionZ * motionZ + motionY * motionY);
 	}

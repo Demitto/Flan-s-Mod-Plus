@@ -2066,6 +2066,11 @@ public class ModelRendererTurbo extends ModelRenderer
 		if(glow){
 			glowOn();
 		}
+		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
+		GL11.glEnable(GL11.GL_BLEND);
+		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
+		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 		if(field_1402_i)
 		{
 			return;
@@ -2135,6 +2140,8 @@ public class ModelRendererTurbo extends ModelRenderer
 		if(glow) {
 			glowOff();
 		}
+		GL11.glBlendFunc(srcBlend, dstBlend);
+		GL11.glDisable(GL11.GL_BLEND);
 		GL11.glPopMatrix();
 	}
 	
@@ -2284,6 +2291,12 @@ public class ModelRendererTurbo extends ModelRenderer
     public static void glowOn(int glow)
     {
         GL11.glPushAttrib(GL11.GL_LIGHTING_BIT);
+        
+        //GL11.glEnable(GL11.GL_BLEND);
+        //GL11.glDisable(GL11.GL_ALPHA_TEST);
+        //GL11.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE);
+        
+        
         
         try {
         	lightmapLastX = OpenGlHelper.lastBrightnessX;
