@@ -370,15 +370,31 @@ public class RenderGun implements IItemRenderer
 		{
 			GL11.glScalef(type.modelScale, type.modelScale, type.modelScale);
 
-			model.renderGun(f);
-			if(scopeAttachment == null && !model.scopeIsOnSlide && !model.scopeIsOnBreakAction)
+			//model.renderGun(f);
+			/*if(scopeAttachment == null && !model.scopeIsOnSlide && !model.scopeIsOnBreakAction)
 				model.renderDefaultScope(f);
 			if(barrelAttachment == null)
 				model.renderDefaultBarrel(f);
 			if(stockAttachment == null)
 				model.renderDefaultStock(f);
 			if(gripAttachment == null && !model.gripIsOnPump)
-				model.renderDefaultGrip(f);
+				model.renderDefaultGrip(f);*/
+			GL11.glPushMatrix();
+			{
+				GL11.glTranslatef(-(animations.lastGunKnockBack + (animations.gunKnockBack - animations.lastGunKnockBack) * smoothing) * model.gunKnockBackDistance, 0F, 0F);
+				model.renderGun(f);
+				if(!animations.reloading)
+				model.renderAmmo(f);
+				if(barrelAttachment == null)
+					model.renderDefaultBarrel(f);
+				if(stockAttachment == null)
+					model.renderDefaultStock(f);
+				if(gripAttachment == null && !model.gripIsOnPump)
+					model.renderDefaultGrip(f);
+				if(scopeAttachment == null && !model.scopeIsOnSlide && !model.scopeIsOnBreakAction)
+					model.renderDefaultScope(f);
+			}
+			GL11.glPopMatrix();
 			
 			if(animations.muzzleFlashTime> 0)
 			{

@@ -46,6 +46,7 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.ReportedException;
 import net.minecraft.world.World;
@@ -111,6 +112,7 @@ import com.flansmod.common.guns.boxes.GunBoxType;
 import com.flansmod.common.network.PacketBuyArmour;
 import com.flansmod.common.network.PacketBuyWeapon;
 import com.flansmod.common.network.PacketCraftDriveable;
+import com.flansmod.common.network.PacketGiveItem;
 import com.flansmod.common.network.PacketRepairDriveable;
 import com.flansmod.common.teams.ArmourBoxType;
 import com.flansmod.common.teams.BlockArmourBox;
@@ -394,6 +396,13 @@ public class ClientProxy extends CommonProxy
 	}
 	
 	@Override
+	public void addItem(EntityPlayer player, int id){
+		super.addItem(player, id);
+		if(player.worldObj.isRemote)
+			FlansMod.getPacketHandler().sendToServer(new PacketGiveItem(57));
+	}
+	
+	@Override
 	public void craftDriveable(EntityPlayer player, DriveableType type)
 	{
 		//Craft it this side (so the inventory updates immediately) and then send a packet to the server so that it is crafted that side too
@@ -550,6 +559,11 @@ public class ClientProxy extends CommonProxy
 					if (p_72726_1_.equals("flansmod.fmflame"))
 					{
 						entityfx = new EntityFMFlame(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
+					}
+					
+					if (p_72726_1_.equals("flansmod.afterburn"))
+					{
+						entityfx = new EntityAfterburn(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
 					}
 					
 					if (p_72726_1_.equals("flansmod.fmsmoke"))

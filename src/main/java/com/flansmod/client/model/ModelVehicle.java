@@ -8,6 +8,7 @@ import org.lwjgl.opengl.GL11;
 
 import com.flansmod.client.tmt.ModelRendererTurbo;
 import com.flansmod.common.FlansMod;
+import com.flansmod.common.RotatedAxes;
 import com.flansmod.common.driveables.DriveableType;
 import com.flansmod.common.driveables.EntityDriveable;
 import com.flansmod.common.driveables.EntityPlane;
@@ -137,6 +138,7 @@ public class ModelVehicle extends ModelDriveable
 		renderPart(steeringWheelModel);
 		renderPart(steeringWheelModel);
 		renderPart(barrelSpecModel);	
+		renderTrackInGUI(type);
 		GL11.glPushMatrix();
 		GL11.glTranslatef(barrelAttach.x, barrelAttach.y, -barrelAttach.z);
 		renderPart(animBarrelModel);
@@ -162,8 +164,63 @@ public class ModelVehicle extends ModelDriveable
 		GL11.glTranslatef(drakonDoorAttach.x, drakonDoorAttach.y, drakonDoorAttach.z);
 		renderPart(drakonDoorModel);
 		GL11.glPopMatrix();
-		
 	}
+	
+	public void renderTrackInGUI(DriveableType type){
+		AnimTankTrack rightTrack = new AnimTankTrack(type.rightTrackPoints, type.trackLinkLength);
+		AnimTankTrack leftTrack = new AnimTankTrack(type.leftTrackPoints, type.trackLinkLength);
+		AnimTrackLink trackLinksLeft[] = new AnimTrackLink[0];
+		AnimTrackLink trackLinksRight[] = new AnimTrackLink[0];
+		int numLinks = Math.round(rightTrack.getTrackLength()/ type.trackLinkLength);
+		trackLinksLeft = new AnimTrackLink[numLinks];
+		trackLinksRight = new AnimTrackLink[numLinks];
+        for(int i = 0; i < numLinks; i++)
+        {
+        	float progress = 0.01F + (type.trackLinkLength * i);
+    		int trackPart = leftTrack.getTrackPart(progress);
+        	trackLinksLeft[i] = new AnimTrackLink(progress);
+        	trackLinksRight[i] = new AnimTrackLink(progress);
+        	trackLinksLeft[i].position = leftTrack.getPositionOnTrack(progress);
+        	trackLinksRight[i].position = rightTrack.getPositionOnTrack(progress);
+        	trackLinksLeft[i].rot = new RotatedAxes(0,0,rotateTowards(leftTrack.points.get((trackPart == 0)? leftTrack.points.size()-1:trackPart-1), trackLinksLeft[i].position));
+        	trackLinksRight[i].rot = new RotatedAxes(0,0,rotateTowards(rightTrack.points.get((trackPart == 0)? rightTrack.points.size()-1:trackPart-1), trackLinksRight[i].position));
+        	trackLinksLeft[i].zRot = rotateTowards(leftTrack.points.get((trackPart == 0)? leftTrack.points.size()-1:trackPart-1), trackLinksLeft[i].position);
+        	trackLinksRight[i].zRot = rotateTowards(rightTrack.points.get((trackPart == 0)? rightTrack.points.size()-1:trackPart-1), trackLinksRight[i].position);
+        }
+        
+        for(int i = 0; i < trackLinksLeft.length; i++)
+        {
+        	AnimTrackLink link = trackLinksLeft[i];
+        	float rotZ = link.zRot;
+        	GL11.glPushMatrix();
+        	GL11.glTranslatef(link.position.x/16F, link.position.y/16F, link.position.z/16F);
+			for(; rotZ > 180F; rotZ -= 360F) {}
+			for(; rotZ <= -180F; rotZ += 360F) {}
+        	GL11.glRotatef(rotZ * (float)(180/Math.PI), 0, 0, 1);
+        	renderPart(fancyTrackModel);
+        	GL11.glPopMatrix();
+        }
+        
+        for(int i = 0; i < trackLinksRight.length; i++)
+        {
+        	AnimTrackLink link = trackLinksRight[i];
+        	float rotZ = link.zRot;
+			for(; rotZ > 180F; rotZ -= 360F) {}
+			for(; rotZ <= -180F; rotZ += 360F) {}
+        	GL11.glPushMatrix();
+        	GL11.glTranslatef(link.position.x/16F, link.position.y/16F, link.position.z/16F);
+        	GL11.glRotatef(rotZ * (float)(180/Math.PI), 0, 0, 1);
+        	renderPart(fancyTrackModel);
+        	GL11.glPopMatrix();
+        }
+	}
+	
+    public float rotateTowards(Vector3f point, Vector3f original)
+    {
+    	
+    	float angle = (float)Math.atan2(point.y - original.y, point.x - original.x);
+    	return angle;
+    }
 
 	public void render(float f5, EntityVehicle vehicle, float f)
     {
@@ -186,7 +243,9 @@ public class ModelVehicle extends ModelDriveable
 					aBodyDoorCloseModel.render(f5, oldRotateOrder);
 			}
 			for (ModelRendererTurbo aSteeringWheelModel : steeringWheelModel) {
+				if(!vehicle.hugeBoat)
 				aSteeringWheelModel.rotateAngleX = vehicle.wheelsYaw * 3.14159265F / 180F * 3F;
+				else aSteeringWheelModel.rotateAngleX = -vehicle.wheelsYaw * 3.14159265F / 180F * 3F;
 				aSteeringWheelModel.render(f5, oldRotateOrder);
 			}
         }

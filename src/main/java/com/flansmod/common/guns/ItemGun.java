@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
 
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
@@ -58,8 +57,9 @@ import com.flansmod.common.guns.raytracing.EnumHitboxType;
 import com.flansmod.common.guns.raytracing.PlayerBulletHit;
 import com.flansmod.common.guns.raytracing.PlayerHitbox;
 import com.flansmod.common.guns.raytracing.PlayerSnapshot;
+import com.flansmod.common.network.PacketAccuracyInADS;
+import com.flansmod.common.network.PacketDefaultAccuracy;
 import com.flansmod.common.network.PacketGunFire;
-import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketPlaySound;
 import com.flansmod.common.network.PacketReload;
 import com.flansmod.common.network.PacketSelectOffHandGun;
@@ -85,13 +85,14 @@ public class ItemGun extends Item implements IFlanItem
 	private static boolean lastRightMouseHeld;
 	private static boolean leftMouseHeld;
 	private static boolean lastLeftMouseHeld;
+	public boolean isInADS = false;
 	public int soundDelay;
 	public int lockOnSoundDelay;
 
 	public int impactX = 0;
 	public int impactY = 0;
 	public int impactZ = 0;
-	
+
 
 
 	//public boolean sendPosToServer = false;
@@ -185,13 +186,13 @@ public class ItemGun extends Item implements IFlanItem
 			Collections.addAll(lines, type.description.split("_"));
 		}
 		if(type.showDamage)
-			lines.add("\u00a79Damage" + "\u00a77: " + type.getDamage(stack));
+			lines.add("\u00a79Damage" + "\u00a77: " + (int)type.getDamage(stack));
 		if(type.showRecoil)
-			lines.add("\u00a79Recoil" + "\u00a77: " + type.getRecoilPitch(stack));
+			lines.add("\u00a79Recoil" + "\u00a77: " + (int)type.getRecoilPitch(stack));
 		if(type.showSpread)
-			lines.add("\u00a79Accuracy" + "\u00a77: " + type.getSpread(stack));
+			lines.add("\u00a79Accuracy" + "\u00a77: " + (int)type.getSpread(stack));
 		if(type.showReloadTime)
-			lines.add("\u00a79Reload Time" + "\u00a77: " + type.getReloadTime(stack) / 20 + "s");
+			lines.add("\u00a79Reload Time" + "\u00a77: " + (int)type.getReloadTime(stack) / 20 + "s");
 		for(AttachmentType attachment : type.getCurrentAttachments(stack))
 		{
 			if(type.showAttachments)
@@ -354,6 +355,10 @@ public class ItemGun extends Item implements IFlanItem
 							isNightVision = true;
 						if(type.allowSlow)
 							isSlow = true;*/
+
+						FlansMod.getPacketHandler().sendToServer(new PacketAccuracyInADS(itemstack));
+						type.bulletSpread = type.spreadInADS;
+
 						FlansModClient.currentScope = currentScope;
 						FlansModClient.lastZoomLevel = currentScope.getZoomFactor();
 						FlansModClient.lastFOVZoomLevel = currentScope.getFOVFactor();
@@ -368,6 +373,8 @@ public class ItemGun extends Item implements IFlanItem
 						//if(type.allowNightVision)
 							//isNightVision = false;
 						FlansModClient.currentScope = null;
+						FlansMod.getPacketHandler().sendToServer(new PacketDefaultAccuracy(itemstack));
+						type.bulletSpread = type.defaultSpread;
 						gameSettings.mouseSensitivity = FlansModClient.originalMouseSensitivity;
 						gameSettings.thirdPersonView = FlansModClient.originalThirdPerson;
 						gameSettings.fovSetting = FlansModClient.originalFOV;
@@ -586,12 +593,29 @@ public class ItemGun extends Item implements IFlanItem
 			onUpdateClient(itemstack, world, pEnt, i, flag);
 		else onUpdateServer(itemstack, world, pEnt, i, flag);
 
+
 		if(pEnt instanceof EntityPlayer)
 		{
 			EntityPlayer player = (EntityPlayer)pEnt;
 			PlayerData data = PlayerHandler.getPlayerData(player);
 			if(data == null)
 				return;
+
+
+			if(player.inventory.getCurrentItem() != null)
+			{
+				if(!player.inventory.getCurrentItem().equals(itemstack) && itemstack.getItem() instanceof ItemGun)
+				{
+					ItemGun gun = (ItemGun)itemstack.getItem();
+					gun.type.bulletSpread = gun.type.defaultSpread;
+				}
+			}else{
+				if(itemstack.getItem() instanceof ItemGun)
+				{
+					ItemGun gun = (ItemGun)itemstack.getItem();
+					gun.type.bulletSpread = gun.type.defaultSpread;
+				}
+			}
 
 			//player.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, 2, 1));
 			if(type.activateSlowInInventoryLevel != -1)
@@ -1058,6 +1082,7 @@ public class ItemGun extends Item implements IFlanItem
 	/** Reload method. Called automatically when firing with an empty clip */
 	public boolean reload(ItemStack gunStack, GunType gunType, World world, Entity entity, IInventory inventory, boolean creative, boolean forceReload)
 	{
+
 		//Deployable guns cannot be reloaded in the inventory
 		if(gunType.deployable)
 			return false;
@@ -1140,7 +1165,7 @@ public class ItemGun extends Item implements IFlanItem
 			entity.entityDropItem(dropStack, 0.5F);
 		}
 	}
-	
+
 
 	/** Method for shooting to avoid repeated code */
 	private void shoot(ItemStack stack, GunType gunType, World world, ItemStack bulletStack, EntityPlayer entityplayer, boolean left)
@@ -1176,7 +1201,7 @@ public class ItemGun extends Item implements IFlanItem
 					spread = ((BulletType) shootableType).bulletSpread;
 				}
 			}
-			
+
 
 			if(numBullets <= 0)
 			{
@@ -1348,8 +1373,8 @@ public class ItemGun extends Item implements IFlanItem
     {
     	return type.colour;
     }
-	
-	
+
+
 	public boolean isItemStackDamageable()
 	{
 		return true;

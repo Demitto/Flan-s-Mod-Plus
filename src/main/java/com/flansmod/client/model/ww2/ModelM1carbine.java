@@ -6,17 +6,15 @@ package com.flansmod.client.model.ww2; //Path where the model is located
 
 import com.flansmod.client.model.EnumAnimationType;
 import com.flansmod.client.model.ModelGun;
-import com.flansmod.common.vector.Vector3f;
 import com.flansmod.client.tmt.ModelRendererTurbo;
-import com.flansmod.client.tmt.Coord2D;
-import com.flansmod.client.tmt.Shape2D;
+import com.flansmod.common.vector.Vector3f;
 
-public class ModelM1Carbine extends ModelGun //Same as Filename
+public class ModelM1carbine extends ModelGun //Same as Filename
 {
 	int textureX = 128;
 	int textureY = 128;
 
-	public ModelM1Carbine() //Same as Filename
+	public ModelM1carbine() //Same as Filename
 	{
 		gunModel = new ModelRendererTurbo[29];
 		gunModel[0] = new ModelRendererTurbo(this, 1, 1, textureX, textureY); // Box 2

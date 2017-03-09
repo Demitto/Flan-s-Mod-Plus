@@ -26,7 +26,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 public class GunType extends InfoType implements IScope
 {
 	public static final Random rand = new Random();
-	
+
 	//Gun Behaviour Variables
 	/** The list of bullet types that can be used in this gun */
 	public List<ShootableType> ammo = new ArrayList<ShootableType>();
@@ -43,6 +43,8 @@ public class GunType extends InfoType implements IScope
 	public float decreaseRecoilYaw = 1;
 	/** The amount that bullets spread out when fired from this gun */
 	public float bulletSpread;
+	public float spreadInADS = -1;
+	public float defaultSpread;
 	public boolean allowSpreadByBullet = false;
 	/** Damage inflicted by this gun. Multiplied by the bullet damage. */
 	public float damage = 0;
@@ -265,7 +267,12 @@ public class GunType extends InfoType implements IScope
 			else if(split[0].equals("Knockback"))
 				knockback = Float.parseFloat(split[1]);
 			else if(split[0].equals("Accuracy") || split[0].equals("Spread"))
+			{
 				bulletSpread = Float.parseFloat(split[1]);
+				defaultSpread = bulletSpread;
+			}
+			else if(split[0].equals("AccuracyInADS") || split[0].equals("SpreadInADS"))
+				spreadInADS = Float.parseFloat(split[1]);
 			else if(split[0].equals("NumBullets"))
 				numBullets = Integer.parseInt(split[1]);
 			else if(split[0].equals("AllowNumBulletsByBulletType"))
@@ -781,7 +788,7 @@ public class GunType extends InfoType implements IScope
 		{
 			stack.setTagCompound(new NBTTagCompound());
 		}
-		
+
 		if(fireMode < EnumFireMode.values().length)
 		{
 			stack.getTagCompound().setByte("GunMode", (byte)fireMode);
@@ -811,7 +818,7 @@ public class GunType extends InfoType implements IScope
 		}
 
 		setFireMode(stack, mode.ordinal());
-		
+
 		for(AttachmentType attachment : getCurrentAttachments(stack))
 		{
 			if(attachment.modeOverride != null)

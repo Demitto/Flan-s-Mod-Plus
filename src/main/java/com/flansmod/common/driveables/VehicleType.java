@@ -4,10 +4,8 @@ import java.util.ArrayList;
 
 import com.flansmod.client.model.ModelVehicle;
 import com.flansmod.common.FlansMod;
-import com.flansmod.common.driveables.DriveableType.ParticleEmitter;
 import com.flansmod.common.types.TypeFile;
 import com.flansmod.common.vector.Vector3f;
-import com.flansmod.common.vector.Vector3i;
 
 public class VehicleType extends DriveableType
 {
@@ -22,13 +20,19 @@ public class VehicleType extends DriveableType
 	/** Tank movement system. Uses track collision box for thrust, rather than the wheels */
 	public boolean tank = false;
 
+	/** If true, this vehicle can use zoom **/
+	public boolean enableZoom = false;
+	public float zoomLevel = 0;
+	public String scopeName;
+
+
 	/** Shoot delays */
 	public int vehicleShootDelay, vehicleShellDelay;
 	/** Aesthetic door variable */
     public boolean hasDoor = false;
-    
-    
-    
+
+
+
 	//Door animations
 	public Vector3f doorPos1 = new Vector3f(0,0,0);
 	public Vector3f doorPos2 = new Vector3f(0,0,0);
@@ -36,19 +40,22 @@ public class VehicleType extends DriveableType
 	public Vector3f doorRot2 = new Vector3f(0,0,0);
 	public Vector3f doorRate = new Vector3f(0,0,0);
 	public Vector3f doorRotRate = new Vector3f(0,0,0);
-	
+
 	public Vector3f door2Pos1 = new Vector3f(0,0,0);
 	public Vector3f door2Pos2 = new Vector3f(0,0,0);
 	public Vector3f door2Rot1 = new Vector3f(0,0,0);
 	public Vector3f door2Rot2 = new Vector3f(0,0,0);
 	public Vector3f door2Rate = new Vector3f(0,0,0);
 	public Vector3f door2RotRate = new Vector3f(0,0,0);
-	
+
 	public boolean shootWithOpenDoor = false;
-	
+
 	public int trackLinkFix = 5;
 	public boolean flipLinkFix = false;
-	
+
+	public String driftSound = "";
+	public int driftSoundLength;
+
 	public ArrayList<SmokePoint> smokers = new ArrayList<SmokePoint>();
 
 	public static ArrayList<VehicleType> types = new ArrayList<VehicleType>();
@@ -101,7 +108,24 @@ public class VehicleType extends DriveableType
             	trackLinkFix = Integer.parseInt(split[1].toLowerCase());
             if(split[0].equals("FlipLinkFix"))
             	flipLinkFix = Boolean.parseBoolean(split[1].toLowerCase());
-            
+
+            //Zoom
+            if(split[0].equals("EnableZoom"))
+            {
+            	if(split[1].toLowerCase() == null)
+            		enableZoom = true;
+            	else
+            		enableZoom = Boolean.parseBoolean(split[1].toLowerCase());
+            }
+            else if(split[0].equals("ZoomLevel"))
+			{
+				zoomLevel = Float.parseFloat(split[1]);
+			}
+            else if(split[0].equals("Scope"))
+			{
+				scopeName = split[1];
+			}
+
             //Animations
             if(split[0].equals("DoorPosition1"))
             	doorPos1 = new Vector3f(split[1], shortName);
@@ -115,7 +139,7 @@ public class VehicleType extends DriveableType
             	doorRate = new Vector3f(split[1], shortName);
             if(split[0].equals("DoorRotRate"))
             	doorRotRate = new Vector3f(split[1], shortName);
-            
+
             if(split[0].equals("Door2Position1"))
             	door2Pos1 = new Vector3f(split[1], shortName);
             if(split[0].equals("Door2Position2"))
@@ -129,8 +153,8 @@ public class VehicleType extends DriveableType
             if(split[0].equals("Door2RotRate"))
             	door2RotRate = new Vector3f(split[1], shortName);
 
-            
-            
+
+
 			//Armaments
 			if(split[0].equals("ShootDelay"))
 				vehicleShootDelay = Integer.parseInt(split[1]);
@@ -148,7 +172,13 @@ public class VehicleType extends DriveableType
 				shootSoundSecondary = split[1];
 				FlansMod.proxy.loadSound(contentPack, "driveables", split[1]);
 			}
-			
+			else if(split[0].equals("DriftSoundLength"))
+				driftSoundLength = Integer.parseInt(split[1]);
+			else if(split[0].equals("DriftSound"))
+			{
+				driftSound = split[1];
+				FlansMod.proxy.loadSound(contentPack, "driveables", split[1]);
+			}
 			if(split[0].equalsIgnoreCase("AddSmokePoint") || split[0].equalsIgnoreCase("AddSmokeDispenser"))
 			{
 				SmokePoint smoke = new SmokePoint();
@@ -173,7 +203,10 @@ public class VehicleType extends DriveableType
 		}
 		return null;
 	}
-	
+	public String getScope(){
+		return scopeName;
+	}
+
 	public class SmokePoint
 	{
 		public Vector3f position;

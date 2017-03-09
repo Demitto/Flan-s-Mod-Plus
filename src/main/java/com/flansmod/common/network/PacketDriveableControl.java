@@ -16,6 +16,7 @@ public class PacketDriveableControl extends PacketBase
 {
 	public int entityId;
 	public double posX, posY, posZ;
+	public double prevPosX, prevPosY, prevPosZ;
 	public float yaw, pitch, roll;
 	public double motX, motY, motZ;
 	public float avelx, avely, avelz;
@@ -45,6 +46,9 @@ public class PacketDriveableControl extends PacketBase
 		posX = driveable.posX;
 		posY = driveable.posY;
 		posZ = driveable.posZ;
+		prevPosX = driveable.prevPosX;
+		prevPosY = driveable.prevPosY;
+		prevPosZ = driveable.prevPosZ;
 		yaw = driveable.axes.getYaw();
 		pitch = driveable.axes.getPitch();
 		roll = driveable.axes.getRoll();
@@ -87,6 +91,9 @@ public class PacketDriveableControl extends PacketBase
     	data.writeDouble(posX);
     	data.writeDouble(posY);
     	data.writeDouble(posZ);
+    	data.writeDouble(prevPosX);
+    	data.writeDouble(prevPosY);
+    	data.writeDouble(prevPosZ);
     	data.writeFloat(yaw);
     	data.writeFloat(pitch);
     	data.writeFloat(roll);
@@ -121,6 +128,9 @@ public class PacketDriveableControl extends PacketBase
 		posX = data.readDouble();
 		posY = data.readDouble();
 		posZ = data.readDouble();
+		prevPosX = data.readDouble();
+		prevPosY = data.readDouble();
+		prevPosZ = data.readDouble();
 		yaw = data.readFloat();
 		pitch = data.readFloat();
 		roll = data.readFloat();
@@ -147,6 +157,7 @@ public class PacketDriveableControl extends PacketBase
 		key = readUTF(data);
 	}
 
+
 	@Override
 	public void handleServerSide(EntityPlayerMP playerEntity) 
 	{
@@ -166,6 +177,9 @@ public class PacketDriveableControl extends PacketBase
 	protected void updateDriveable(EntityDriveable driveable, boolean clientSide)
 	{
 		driveable.setPositionRotationAndMotion(posX, posY, posZ, yaw, pitch, roll, motX, motY, motZ, avelx, avely, avelz, throttle, steeringYaw);
+		driveable.prevPosX = prevPosX;
+		driveable.prevPosY = prevPosY;
+		driveable.prevPosZ = prevPosZ;
 		driveable.driveableData.fuelInTank = fuelInTank;
 		driveable.recoilPos = recoilPos;
 		driveable.lastRecoilPos = lastRecoilPos;

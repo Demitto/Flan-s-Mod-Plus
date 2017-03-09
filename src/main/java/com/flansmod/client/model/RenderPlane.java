@@ -14,6 +14,8 @@ import net.minecraftforge.client.IItemRenderer;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 
 import com.flansmod.client.FlansModResourceHandler;
+import com.flansmod.client.model.animation.AnimationController;
+import com.flansmod.client.model.animation.AnimationPart;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.driveables.DriveablePart;
 import com.flansmod.common.driveables.DriveablePosition;
@@ -94,6 +96,11 @@ public class RenderPlane extends Render implements IItemRenderer
 			
 			Vector3f wingPos = getRenderPosition(entityPlane.wingPos, entityPlane.prevWingPos, f1);
 			Vector3f wingRot = getRenderPosition(entityPlane.wingRot, entityPlane.prevWingRot, f1);
+			if(entityPlane.initiatedAnim){
+				AnimationController cont = entityPlane.anim;
+				AnimationPart p = cont.getCorePart();
+				renderAnimPart(p, new Vector3f(0,0,0), model, entityPlane, 0.0625F, f1);
+			}
 			
 			//Rotate/Render left wing
 			GL11.glPushMatrix();
@@ -293,14 +300,52 @@ public class RenderPlane extends Render implements IItemRenderer
 		}
 		GL11.glPopMatrix();
 	}
-<<<<<<< HEAD
+	
+	public int getPartId(int i)
+	{
+		/**
+		int id = 0;
+		if(i == 2) id = 0;
+		else if(i == 1) id = 1;
+		else if(i == 0) id = 2;
+		else id = i;
+		*/
+		int id = i;
+		return id;
+	}
+	
+	public void renderAnimPart(AnimationPart p, Vector3f parent, ModelPlane mod, EntityPlane plane, float f5, float f1)
+	{
+		Vector3f pos = Vector3f.sub(p.position, parent, null);
+		Vector3f offset = Interpolate(p.offset, p.prevOff, f1);
+		Vector3f rotation = Interpolate(p.rotation, p.prevRot, f1);
+		GL11.glPushMatrix();
+		GL11.glTranslatef(pos.x/16F, -pos.y/16F, -pos.z/16F);
+		GL11.glRotatef(rotation.x, 1, 0, 0);
+		GL11.glRotatef(rotation.y, 0, 1, 0);
+		GL11.glRotatef(rotation.z, 0, 0, 1);
+		GL11.glTranslatef(offset.x/16F, offset.y/16F, offset.z/16F);
+		int i = getPartId(p.type);
+		mod.renderValk(plane, f5, i);
+		if(p.hasChildren){
+			for(AnimationPart p2:p.children)
+			{
+				renderAnimPart(p2, p.position, mod, plane, f5, f1);
+			}
+		}
+		GL11.glPopMatrix();
+		
+	}
+	
+	public Vector3f Interpolate(Vector3f current, Vector3f prev, float f1)
+	{
+		Vector3f result;
+		result = new Vector3f(prev.x + (current.x-prev.x)*f1,prev.y + (current.y-prev.y)*f1, prev.z + (current.z-prev.z)*f1);
+		return result;
+	}
 	
 	//Broken method to try and rotate playermodel, will fix later.
 	//TODO: Make this work
-=======
-
-	//Non-functional method to rotate player model. Rework
->>>>>>> origin/master
 	/**
     @SubscribeEvent
     public void preRenderLiving(RenderPlayerEvent.Pre event)

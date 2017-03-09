@@ -64,8 +64,8 @@ public class GuiDriveableMenu extends GuiContainer
 		//Repair button
 		buttonList.add(new GuiButton(4, width / 2 - 60, height / 2 - 27, 58, 20, "Repair"));
 		
-		GuiButton testButton = new GuiButton(6, width / 2 - 160, height / 2 - 71, 58, 20, "Targeting");
-		buttonList.add(testButton);
+		//GuiButton testButton = new GuiButton(6, width / 2 - 160, height / 2 - 71, 58, 20, "Targeting");
+		//buttonList.add(testButton);
 	}
 	
 	@Override

@@ -80,6 +80,10 @@ public class ModelPlane extends ModelDriveable
 	public ModelRendererTurbo leftWingPos1Model[] = new ModelRendererTurbo[0];
 	public ModelRendererTurbo leftWingPos2Model[] = new ModelRendererTurbo[0];
 	public ModelRendererTurbo hudModel[] = new ModelRendererTurbo[0];
+	
+	//Experimental Valkyrie stuff
+	public ModelRendererTurbo valkyrie[][] = new ModelRendererTurbo[0][0];
+	
 	@Override
 	public void render(EntityDriveable driveable, float f1)
 	{
@@ -115,6 +119,7 @@ public class ModelPlane extends ModelDriveable
 		}
 		for (ModelRendererTurbo[] heliMainRotorModel : heliMainRotorModels) renderPart(heliMainRotorModel);
 		for (ModelRendererTurbo[] heliTailRotorModel : heliTailRotorModels) renderPart(heliTailRotorModel);
+		for (ModelRendererTurbo[] partModel : valkyrie) renderPart(partModel);
 		renderPart(helicopterModeParts);
 		renderPart(skidsModel);
 		renderPart(yawFlapModel);
@@ -173,7 +178,7 @@ public class ModelPlane extends ModelDriveable
 				}
 			}
 		}
-				
+
 		if(plane.isPartIntact(EnumDriveablePart.nose))
 		{
 			//Nose
@@ -385,6 +390,13 @@ public class ModelPlane extends ModelDriveable
         }
     }
     
+    public void renderValk(EntityPlane plane, float f5, int id)
+    {
+		for (ModelRendererTurbo aModel : valkyrie[id]) {
+			aModel.render(f5);
+		}
+    }
+    
     public void renderLeftWing(EntityPlane plane, float f5)
     {
 		if(plane.isPartIntact(EnumDriveablePart.leftWing))
@@ -520,6 +532,10 @@ public class ModelPlane extends ModelDriveable
 		flip(leftAnimWingWheelModel);
 		flip(rightAnimWingWheelModel);
 		flip(doorAnimModel);
+		for(ModelRendererTurbo[] valkModel : valkyrie)
+		{
+			flip(valkModel);
+		}
 		
 		for(ModelRendererTurbo[] propellerModel : propellerModels)
 		{
@@ -571,7 +587,10 @@ public class ModelPlane extends ModelDriveable
 		translate(leftAnimWingWheelModel, x, y, z);
 		translate(rightAnimWingWheelModel, x, y, z);
 		translate(doorAnimModel, x,y,z);
-
+		for(ModelRendererTurbo[] valkModel : valkyrie)
+		{
+			translate(valkModel,x,y,z);
+		}
 		for(ModelRendererTurbo[] mods : propellerModels)
 		{
 			translate(mods, x, y, z);

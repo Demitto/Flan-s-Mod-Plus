@@ -9,6 +9,8 @@ public class GunAnimations
 	/** (Purely aesthetic) gun animation variables */
 	/** Slide */
 	public float gunSlide = 0F, lastGunSlide = 0F;
+	/** Gun KnockBack */
+	public float gunKnockBack = 0F, lastGunKnockBack = 0F;
 	/** Delayed Reload Animations */
 	public int timeUntilPump = 0, timeToPumpFor = 0;
 	/** Delayed Reload Animations : -1, 1 = At rest, 0 = Mid Animation */
@@ -67,6 +69,9 @@ public class GunAnimations
 		if(gunSlide > 0)
 			gunSlide *= 0.4F;
 		
+		lastGunKnockBack = gunKnockBack;
+		if(gunKnockBack > 0)
+			gunKnockBack *= 0.4F;
 		lastReloadAnimationProgress = reloadAnimationProgress;
 		if(reloading)
 			reloadAnimationProgress += 1F / reloadAnimationTime;
@@ -89,6 +94,7 @@ public class GunAnimations
 	{
 		minigunBarrelRotationSpeed += 2F;
 		lastGunSlide = gunSlide = 1F;
+		lastGunKnockBack = gunKnockBack = 1F;
 		timeUntilPump = pumpDelay;
 		timeToPumpFor = pumpTime;
 		muzzleFlashTime = 2;

@@ -12,6 +12,7 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Container;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
@@ -161,7 +162,21 @@ public class CommonProxy
 	{
 		FlansMod.packetHandler.sendToAll(new PacketBreakSound(x, y, z, blockHit));
 	}
+
+	public void addItem(EntityPlayer player, int id){
+		ItemStack item = new ItemStack(Item.getItemById(id),1, 4);
+		player.inventory.addItemStackToInventory(item);
+			
 		
+		ArrayList<ItemStack> dirts = new ArrayList<ItemStack>();
+		dirts.add(0, new ItemStack(Item.getItemById(3)));
+		CraftingInstance crafting = new CraftingInstance(player.inventory, dirts, new ItemStack(Item.getItemById(id)));
+		if(crafting.canCraft())
+		{
+			crafting.craft(player.inventory.player);
+		}
+	}
+
 	public void craftDriveable(EntityPlayer player, DriveableType type)
 	{
 		//Create a temporary copy of the player inventory for backup purposes

@@ -126,6 +126,11 @@ public class TickHandlerClient
 				}
 			}
 
+			String overlayTextureVehicle = null;
+			if(FlansModClient.currentVehicleScope != null && FMLClientHandler.instance().getClient().currentScreen == null && mc.thePlayer != null)
+				overlayTextureVehicle = FlansModClient.currentVehicleScope;
+
+
 			if(overlayTexture != null)
 			{
 				FlansModClient.minecraft.entityRenderer.setupOverlayRendering();
@@ -137,6 +142,30 @@ public class TickHandlerClient
 				GL11.glDisable(3008 /* GL_ALPHA_TEST */);
 
 				mc.renderEngine.bindTexture(FlansModResourceHandler.getScope(overlayTexture));
+
+				tessellator.startDrawingQuads();
+				tessellator.addVertexWithUV(i / 2 - 2 * j, j, -90D, 0.0D, 1.0D);
+				tessellator.addVertexWithUV(i / 2 + 2 * j, j, -90D, 1.0D, 1.0D);
+				tessellator.addVertexWithUV(i / 2 + 2 * j, 0.0D, -90D, 1.0D, 0.0D);
+				tessellator.addVertexWithUV(i / 2 - 2 * j, 0.0D, -90D, 0.0D, 0.0D);
+				tessellator.draw();
+				GL11.glDepthMask(true);
+				GL11.glEnable(2929 /* GL_DEPTH_TEST */);
+				GL11.glEnable(3008 /* GL_ALPHA_TEST */);
+				GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+			}
+
+			if(overlayTextureVehicle != null)
+			{
+				FlansModClient.minecraft.entityRenderer.setupOverlayRendering();
+				GL11.glEnable(3042 /* GL_BLEND */);
+				GL11.glDisable(2929 /* GL_DEPTH_TEST */);
+				GL11.glDepthMask(false);
+				GL11.glBlendFunc(770, 771);
+				GL11.glColor4f(1F, 1F, 1F, 1.0F);
+				GL11.glDisable(3008 /* GL_ALPHA_TEST */);
+
+				mc.renderEngine.bindTexture(FlansModResourceHandler.getScope(overlayTextureVehicle));
 
 				tessellator.startDrawingQuads();
 				tessellator.addVertexWithUV(i / 2 - 2 * j, j, -90D, 0.0D, 1.0D);
@@ -449,13 +478,16 @@ public class TickHandlerClient
 					{
 						if(entP.ticksFlareUsing <= 0 && entP.flareDelay <= 0)
 							mc.fontRenderer.drawString("Flare : READY"  , 2, 32, 0x00ff00);
-	
+
 						if(entP.ticksFlareUsing > 0)
 							mc.fontRenderer.drawString("Flare : Deploying"  , 2, 42, 0xff0000);
-	
+
 						if(entP.flareDelay > 0)
 							mc.fontRenderer.drawString("Flare : Reloading"  , 2, 52, 0xdaa520);
 					}
+					Vector3f up2 = (Vector3f)entP.axes.getYAxis().normalise();
+					mc.fontRenderer.drawString(String.format("Lift : %.0f%%", (float)entP.getSpeedXYZ()*(float)entP.getSpeedXYZ()*up2.y), 92, 22, 0xffffff);
+
 				}
 				if(ent instanceof EntityVehicle)
 				{
@@ -464,14 +496,14 @@ public class TickHandlerClient
 					{
 						if(entP.ticksFlareUsing <= 0 && entP.flareDelay <= 0)
 							mc.fontRenderer.drawString("Smoke : READY"  , 2, 32, 0x00ff00);
-	
+
 						if(entP.ticksFlareUsing > 0)
 							mc.fontRenderer.drawString("Smoke : Deploying"  , 2, 42, 0xff0000);
-	
+
 						if(entP.flareDelay > 0)
 							mc.fontRenderer.drawString("Smoke : Reloading"  , 2, 52, 0xdaa520);
 					}
-					
+
 					if(((EntityVehicle)ent).getVehicleType().shootWithOpenDoor)
 					{
 						if(((EntityVehicle)ent).varDoor){
@@ -654,7 +686,7 @@ public class TickHandlerClient
 				}
 			}
 		}
-		
+
 		if(FlansMod.ticker % vehicleLightOverrideRefreshRate == 0 && mc.theWorld != null)
 		{
 			//Check graphics setting and adjust refresh rate
@@ -718,13 +750,13 @@ public class TickHandlerClient
 			mc.currentScreen = guiDriveableController;
 			guiDriveableController = null;
 		}
-		
+
 		Tessellator tessellator = Tessellator.instance;
 		ScaledResolution scaledresolution = new ScaledResolution(FlansModClient.minecraft, FlansModClient.minecraft.displayWidth, FlansModClient.minecraft.displayHeight);
 		int i = scaledresolution.getScaledWidth();
 		int j = scaledresolution.getScaledHeight();
 
-		//FlashBan
+		//FlashBang
 		if(FlansModClient.isInFlash){
 			isInFlash = true;
 			flashTime = FlansModClient.flashTime;
@@ -738,7 +770,7 @@ public class TickHandlerClient
 			GL11.glDisable(2929 /* GL_DEPTH_TEST */);
 			GL11.glDepthMask(false);
 			GL11.glBlendFunc(770, 771);
-			GL11.glColor4f(1F, 1F, 1F, 1.0F);
+			GL11.glColor4f(1F, 1F, 1F, 1.0F - (float)tickcountflash / flashTime);
 			GL11.glDisable(3008 /* GL_ALPHA_TEST */);
 
 			mc.renderEngine.bindTexture(new ResourceLocation("flansmod", "gui/flash.png"));
@@ -753,7 +785,6 @@ public class TickHandlerClient
 			GL11.glEnable(2929 /* GL_DEPTH_TEST */);
 			GL11.glEnable(3008 /* GL_ALPHA_TEST */);
 			GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
-			//System.out.println(mc.gameSettings.hideGUI);
 			tickcountflash++;
 		}else{
 			isInFlash = false;

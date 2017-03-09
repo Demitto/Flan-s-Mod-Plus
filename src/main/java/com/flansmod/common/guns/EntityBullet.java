@@ -272,6 +272,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 	{
 		super.onUpdate();
 
+		prevPosX = posX;
+		prevPosY = posY;
+		prevPosZ = posZ;
 		if(type==null)
 		{
 			FlansMod.log("EntityBullet.onUpdate() Error: BulletType is null ("+this+")");
@@ -1065,7 +1068,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 				//if(particle != null && Minecraft.getMinecraft().gameSettings.fancyGraphics)
 					//particle.renderDistanceWeight = 100D;
 				//worldObj.spawnEntityInWorld(particle);
-				FlansMod.proxy.spawnParticle("flansmod.fmflame",
+				FlansMod.proxy.spawnParticle(type.trailParticleType,
 						prevPosX + dX * i + rand.nextGaussian() * spread, prevPosY + dY * i + rand.nextGaussian() * spread, prevPosZ + dZ * i + rand.nextGaussian() * spread,
 						0,0,0);
 			}

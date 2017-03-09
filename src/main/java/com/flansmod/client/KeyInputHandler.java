@@ -136,6 +136,7 @@ public class KeyInputHandler
 			FlansModClient.reloadModels(Keyboard.isKeyDown(Keyboard.KEY_LSHIFT));
 		}
 
+
 		//Handle driving keys
 		if(ridingEntity instanceof IControllable)
 		{

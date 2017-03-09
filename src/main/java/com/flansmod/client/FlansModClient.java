@@ -1,7 +1,6 @@
 package com.flansmod.client;
 
 import java.io.File;
-import java.util.HashMap;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
@@ -46,6 +45,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
+import net.minecraftforge.client.GuiIngameForge;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -83,10 +83,10 @@ public class FlansModClient extends FlansMod
 	public static boolean controlModeMouse = true;
 	/** A delayer on the mouse control switch */
 	public static int controlModeSwitchTimer = 20;
-	
+
 	/** The delay between shots / reloading */
 	public static int shootTimeLeft, shootTimeRight;
-	
+
 	//Recoil variables
 	/** The recoil applied to the player view by shooting */
 	public static float playerRecoilPitch;
@@ -95,18 +95,21 @@ public class FlansModClient extends FlansMod
 	public static float antiRecoilPitch;
 	public static float antiRecoilYaw;
 
-	
-	
+
+
 	//Scope variables
 	/** A delayer on the scope button to avoid repeat presses */
 	public static int scopeTime;
 	/** The scope that is currently being looked down */
 	public static IScope currentScope = null;
+	public static String currentVehicleScope = null;
+	public static boolean isScopeByVehicle = false;
+
 	/** The transition variable for zooming in / out with a smoother. 0 = unscoped, 1 = scoped */
 	public static float zoomProgress = 0F, lastZoomProgress = 0F;
 	/** The zoom level of the last scope used, for transitioning out of being scoped, even after the scope is forgotten */
 	public static float lastZoomLevel = 1F, lastFOVZoomLevel = 1F;
-    
+
 	//Variables to hold the state of some settings so that after being hacked for scopes, they may be restored
 	/** The player's mouse sensitivity setting, as it was before being hacked by my mod */
 	public static float originalMouseSensitivity = 0.5F;
@@ -114,23 +117,23 @@ public class FlansModClient extends FlansMod
 	public static float originalFOV = 90F;
 	/** The original third person mode, before being hacked */
 	public static int originalThirdPerson = 0;
-	
+
 	/** Whether the player is in a plane or not */
 	public static boolean inPlane = false;
-	
+
 	/** Packet containing teams mod information from the server */
 	public static PacketTeamInfo teamInfo;
 	/** When a round ends, the teams score GUI is locked for this length of time */
-	public static int teamsScoreGUILock = 0;	
-	
+	public static int teamsScoreGUILock = 0;
+
 	public void load()
-	{		
+	{
 		log("Loading Flan's mod client side.");
 		MinecraftForge.EVENT_BUS.register(this);
 	}
-	
+
 	//private static final ResourceLocation zombieSkin = new ResourceLocation("flansmod", "skins/zombie.png");
-			
+
 	@SubscribeEvent
 	public void renderOffHandGun(RenderPlayerEvent.Specials.Post event)
 	{
@@ -138,9 +141,9 @@ public class FlansModClient extends FlansMod
 		EntityPlayer player = event.entityPlayer;
 		float dt = event.partialRenderTick;
 		PlayerData data = PlayerHandler.getPlayerData(player, Side.CLIENT);
-		
+
 		ItemStack gunStack = null;
-		
+
 		//Check current stack is a one handed gun
 		if(player instanceof EntityOtherPlayerMP)
 		{
@@ -153,33 +156,33 @@ public class FlansModClient extends FlansMod
 				return;
 			gunStack = player.inventory.getStackInSlot(data.offHandGunSlot - 1);
 		}
-				
+
 		if(gunStack == null || !(gunStack.getItem() instanceof ItemGun))
 			return;
 		GunType gunType = ((ItemGun)gunStack.getItem()).type;
-				
+
 		//Render!
 		GL11.glPushMatrix();
 		renderer.modelBipedMain.bipedLeftArm.postRender(0.0625F);
         GL11.glTranslatef(-0.0625F, 0.4375F, 0.0625F);
 
         float f2 = 1F;
-        
+
         GL11.glTranslatef(0.0F, 0.1875F, -0.3125F);
         GL11.glRotatef(20.0F, 1.0F, 0.0F, 0.0F);
         GL11.glRotatef(45.0F, 0.0F, 1.0F, 0.0F);
         GL11.glScalef(-f2, -f2, f2);
-               
+
         int k = gunStack.getItem().getColorFromItemStack(gunStack, 0);
         float f11 = (float)(k >> 16 & 255) / 255.0F;
         float f12 = (float)(k >> 8 & 255) / 255.0F;
         float f3 = (float)(k & 255) / 255.0F;
         GL11.glColor4f(f11, f12, f3, 1.0F);
-        ClientProxy.gunRenderer.renderOffHandGun(player, gunStack);  
-        
+        ClientProxy.gunRenderer.renderOffHandGun(player, gunStack);
+
         GL11.glPopMatrix();
 	}
-	
+
     private float interpolateRotation(float x, float y, float dT)
     {
         float f3;
@@ -189,30 +192,30 @@ public class FlansModClient extends FlansMod
 
         return x + dT * f3;
     }
-    	
+
 	//Handle player hiding / name tag removal for teams
 	@SubscribeEvent
 	public void renderLiving(RenderPlayerEvent.Pre event)
 	{
 		PlayerData data = PlayerHandler.getPlayerData(event.entityPlayer, Side.CLIENT);
-		
+
 		//Render debug boxes for player snapshots
 		if(FlansMod.DEBUG && data != null)
 		{
 			if(data.snapshots[0] != null)
 				data.snapshots[0].renderSnapshot();
 		}
-					
+
 		RendererLivingEntity.NAME_TAG_RANGE = 64F;
-		RendererLivingEntity.NAME_TAG_RANGE_SNEAK = 32F;		
+		RendererLivingEntity.NAME_TAG_RANGE_SNEAK = 32F;
 		if(event.entity instanceof EntityPlayer && teamInfo != null && teamInfo.gametype != null && !"No Gametype".equals(teamInfo.gametype))
 		{
 			PlayerScoreData rendering = teamInfo.getPlayerScoreData(event.entity.getCommandSenderName());
 			PlayerScoreData thePlayer = teamInfo.getPlayerScoreData(minecraft.thePlayer.getCommandSenderName());
-			
+
 			Team renderingTeam = rendering == null ? Team.spectators : rendering.team.team;
 			Team thePlayerTeam = thePlayer == null ? Team.spectators : thePlayer.team.team;
-						
+
 			//Do custom skin overrides
 			//If we have no stored skin, try to get it
 			if(data.skin == null)
@@ -223,7 +226,7 @@ public class FlansModClient extends FlansMod
 				ResourceLocation skin = rendering == null || rendering.playerClass == null ? null : FlansModResourceHandler.getTexture(rendering.playerClass);
 				((AbstractClientPlayer)event.entityPlayer).func_152121_a(Type.SKIN, skin == null ? data.skin : skin);
 			}
-			
+
 			//Spectators see all
 			if(thePlayerTeam == Team.spectators)
 				return;
@@ -247,10 +250,10 @@ public class FlansModClient extends FlansMod
 				RendererLivingEntity.NAME_TAG_RANGE_SNEAK = 0F;
             }
 		}
-		
+
 
 	}
-	
+
 	public static int shootTime(boolean left)
 	{
 		return left ? shootTimeLeft : shootTimeRight;
@@ -260,13 +263,13 @@ public class FlansModClient extends FlansMod
 	{
 		if (minecraft.thePlayer == null || minecraft.theWorld == null)
 			return;
-		
+
 		if(minecraft.thePlayer.ridingEntity instanceof IControllable && minecraft.currentScreen == null)
 			minecraft.displayGuiScreen(new GuiDriveableController((IControllable)minecraft.thePlayer.ridingEntity));
-		
+
 		if(teamInfo != null && teamInfo.timeLeft > 0)
 			teamInfo.timeLeft--;
-		
+
 		//Teams GUI lock at end of rounds
 		if(teamsScoreGUILock > 0)
 		{
@@ -274,8 +277,8 @@ public class FlansModClient extends FlansMod
 			if(minecraft.currentScreen == null)
 				minecraft.displayGuiScreen(new GuiTeamScores());
 		}
-		
-		
+
+
 		// Guns
 		if (shootTimeLeft > 0)
 			shootTimeLeft--;
@@ -294,17 +297,17 @@ public class FlansModClient extends FlansMod
 		minecraft.thePlayer.rotationYaw += antiRecoilYaw * 0.2F;
 		antiRecoilPitch *= 0.8F;
 		antiRecoilYaw *= 0.8F;
-		
+
 		//Update gun animations for the gun in hand
 		for(GunAnimations g : gunAnimationsRight.values())
 		{
 			g.update();
-		}		
+		}
 		for(GunAnimations g : gunAnimationsLeft.values())
 		{
 			g.update();
-		}		
-		
+		}
+
 		for(Object obj : minecraft.theWorld.playerEntities)
 		{
 			EntityPlayer player = (EntityPlayer)obj;
@@ -336,7 +339,22 @@ public class FlansModClient extends FlansMod
 			minecraft.gameSettings.mouseSensitivity = originalMouseSensitivity;
 			minecraft.gameSettings.thirdPersonView = originalThirdPerson;
 		}
-		
+
+		if(isScopeByVehicle && !minecraft.thePlayer.isRiding())
+		{
+			if(FlansModClient.originalFOV != 0)
+				minecraft.gameSettings.fovSetting = FlansModClient.originalFOV;
+			else
+				minecraft.gameSettings.fovSetting = 70;
+
+			FlansModClient.currentVehicleScope = null;
+			GuiIngameForge.renderCrosshairs = true;
+			isScopeByVehicle = false;
+		}
+
+
+
+
 		//Calculate new zoom variables
 		lastZoomProgress = zoomProgress;
 		if(currentScope == null)
@@ -345,9 +363,9 @@ public class FlansModClient extends FlansMod
 		}
 		else
 		{
-			zoomProgress = 1F - (1F - zoomProgress) * 0.66F; 
+			zoomProgress = 1F - (1F - zoomProgress) * 0.66F;
 		}
-		
+
 		if (minecraft.thePlayer.ridingEntity instanceof IControllable)
 		{
 			inPlane = true;
@@ -358,7 +376,7 @@ public class FlansModClient extends FlansMod
 			{
 				log("I forgot to update obfuscated reflection D:");
 				throw new RuntimeException(e);
-			}			
+			}
 			if(minecraft.thePlayer.ridingEntity instanceof IControllable)
 			{
 				try
@@ -368,7 +386,7 @@ public class FlansModClient extends FlansMod
 				{
 					log("I forgot to update obfuscated reflection D:");
 					throw new RuntimeException(e);
-				}		
+				}
 			}
 		}
 		else if(inPlane)
@@ -380,7 +398,7 @@ public class FlansModClient extends FlansMod
 			{
 				log("I forgot to update obfuscated reflection D:");
 				throw new RuntimeException(e);
-			}			
+			}
 			try
 			{
 				ObfuscationReflectionHelper.setPrivateValue(EntityRenderer.class, minecraft.entityRenderer, 4.0F, "thirdPersonDistance", "E", "field_78490_B");
@@ -388,13 +406,13 @@ public class FlansModClient extends FlansMod
 			{
 				log("I forgot to update obfuscated reflection D:");
 				throw new RuntimeException(e);
-			}	
+			}
 			inPlane = false;
 		}
 		if (controlModeSwitchTimer > 0)
 			controlModeSwitchTimer--;
 	}
-	
+
 	public static void renderTick(float smoothing)
 	{
 		//If the zoom has changed sufficiently, update it via reflection
@@ -410,7 +428,7 @@ public class FlansModClient extends FlansMod
 			{
 				ObfuscationReflectionHelper.setPrivateValue(EntityRenderer.class, minecraft.entityRenderer, zoomLevel, "cameraZoom", "af", "field_78503_V");
 				minecraft.gameSettings.fovSetting = (((originalFOV * 40 + 70) / FOVZoomLevel) - 70) / 40;
-			} 
+			}
 			catch (Exception e)
 			{
 				log("I forgot to update obfuscated reflection D:");
@@ -418,7 +436,7 @@ public class FlansModClient extends FlansMod
 			}
 		}
 	}
-	
+
 	@SubscribeEvent
 	public void chatMessage(ClientChatReceivedEvent event)
 	{
@@ -431,13 +449,13 @@ public class FlansModClient extends FlansMod
 			//FMLClientHandler.instance().getClient().thePlayer.sendChatToPlayer(split[3] + " killed " + split[2] + " with a " + InfoType.getType(split[1]).name);
 		}
 	}
-		
+
 	private boolean checkFileExists(File file)
 	{
 		if(!file.exists())
 		{
 			try
-			{ 
+			{
 				file.createNewFile();
 			}
 			catch(Exception e)
@@ -446,7 +464,7 @@ public class FlansModClient extends FlansMod
 				FlansMod.log(file.getAbsolutePath());
 			}
 			return false;
-		}	
+		}
 		return true;
 	}
 
@@ -459,7 +477,7 @@ public class FlansModClient extends FlansMod
 		controlModeSwitchTimer = 40;
 		return true;
 	}
-	
+
 	public static void reloadModels(boolean reloadSkins)
 	{
 		for(InfoType type : InfoType.infoTypes)
@@ -469,11 +487,11 @@ public class FlansModClient extends FlansMod
 		if(reloadSkins)
 			proxy.forceReload();
 	}
-	
+
 	public static Minecraft minecraft = FMLClientHandler.instance().getClient();
 
 	/** Gets the team class from an ID */
-	public static Team getTeam(int spawnerTeamID) 
+	public static Team getTeam(int spawnerTeamID)
 	{
 		if(teamInfo == null)
 			return null;
@@ -483,7 +501,7 @@ public class FlansModClient extends FlansMod
 	public static boolean isCurrentMap(String map) {
 		return !(teamInfo == null || teamInfo.mapShortName == null) && teamInfo.mapShortName.equals(map);
 	}
-	
+
 	@SideOnly(Side.CLIENT)
 	public static EntityFX getParticle(String s, World w, double x, double y, double z)
 	{
@@ -631,23 +649,23 @@ public class FlansModClient extends FlansMod
                 }
             }
         }
-		
+
 		if(mc.gameSettings.fancyGraphics)
 			fx.renderDistanceWeight = 200D;
-		
+
         if(fx != null)
             mc.effectRenderer.addEffect(fx);
 		return fx;
 	}
 
-	public static GunAnimations getGunAnimations(EntityLivingBase living, boolean offHand) 
+	public static GunAnimations getGunAnimations(EntityLivingBase living, boolean offHand)
 	{
 		GunAnimations animations = null;
 		if(offHand)
 		{
 			if(FlansModClient.gunAnimationsLeft.containsKey(living))
 				animations = FlansModClient.gunAnimationsLeft.get(living);
-			else 
+			else
 			{
 				animations = new GunAnimations();
 				FlansModClient.gunAnimationsLeft.put(living, animations);
@@ -657,7 +675,7 @@ public class FlansModClient extends FlansMod
 		{
 			if(FlansModClient.gunAnimationsRight.containsKey(living))
 				animations = FlansModClient.gunAnimationsRight.get(living);
-			else 
+			else
 			{
 				animations = new GunAnimations();
 				FlansModClient.gunAnimationsRight.put(living, animations);

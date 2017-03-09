@@ -23,6 +23,7 @@ import com.flansmod.api.IControllable;
 import com.flansmod.client.FlansModClient;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.RotatedAxes;
+import com.flansmod.common.driveables.mechas.EntityMecha;
 import com.flansmod.common.guns.EnumFireMode;
 import com.flansmod.common.guns.GunType;
 import com.flansmod.common.guns.ItemShootable;
@@ -275,7 +276,7 @@ public class EntitySeat extends Entity implements IControllable, IEntityAddition
 		prevPlayerPitch = playerPitch;
 
 		//Get the position of this seat on the driveable axes
-		Vector3f localPosition = new Vector3f(seatInfo.x / 16F, seatInfo.y / 16F, seatInfo.z / 16F);
+		Vector3f localPosition = new Vector3f(seatInfo.x, seatInfo.y, seatInfo.z);
 
 		//Rotate the offset vector by the turret yaw
 		if(driveable != null && driveable.seats != null && driveable.seats[0] != null && driveable.seats[0].looking != null)
@@ -289,6 +290,11 @@ public class EntitySeat extends Entity implements IControllable, IEntityAddition
 		//if(driveable.rotateWithTurret(seatInfo) && driveable.seats[0] != null)
 			//localPosition = driveable.seats[0].looking.findLocalVectorGlobally(localPosition);
 		//Get the position of this seat globally, but positionally relative to the driveable
+		if(this.driveable instanceof EntityPlane && ((EntityPlane)driveable).getPlaneType().valkyrie)
+		{
+			//localPosition = ((EntityPlane)driveable).anim.getFullPosition(new Vector3f(localPosition.x, localPosition.y, localPosition.z), ((EntityPlane)driveable).anim.parts.get(2));
+		}
+		localPosition = new Vector3f(localPosition.x / 16F, localPosition.y / 16F, localPosition.z / 16F);
 		Vector3f relativePosition = driveable.axes.findLocalVectorGlobally(localPosition);
 		//Set the absol
 		setPosition(driveable.posX + relativePosition.x, driveable.posY + relativePosition.y, driveable.posZ + relativePosition.z);
@@ -424,10 +430,7 @@ public class EntitySeat extends Entity implements IControllable, IEntityAddition
 
 			//Calculate the new pitch and consider pitch limiters
 			float newPlayerPitch = playerLooking.getPitch() - deltaY / lookSpeed * FlansMod.proxy.getMouseSensitivity();
-			if(newPlayerPitch > -seatInfo.minPitch)
-				newPlayerPitch = -seatInfo.minPitch;
-			if(newPlayerPitch < -seatInfo.maxPitch)
-				newPlayerPitch = -seatInfo.maxPitch;
+
 
 			//Calculate new yaw and consider yaw limiters
 			float newPlayerYaw = playerLooking.getYaw() + deltaX / lookSpeed * FlansMod.proxy.getMouseSensitivity();
@@ -476,7 +479,7 @@ public class EntitySeat extends Entity implements IControllable, IEntityAddition
 
 			float targetX;
 			
-			if(FlansModClient.controlModeMouse || !driver ||(driveable instanceof EntityPlane))
+			if(FlansModClient.controlModeMouse || !driver ||(driveable instanceof EntityPlane)||(driveable instanceof EntityMecha))
 			targetX = playerLooking.getYaw();
 			else targetX = targetYaw;
 			
@@ -539,7 +542,7 @@ public class EntitySeat extends Entity implements IControllable, IEntityAddition
 			//Calculate the new pitch and consider pitch limiters
 			float targetY = playerLooking.getPitch();
 			
-			if(!FlansModClient.controlModeMouse && driver && !(driveable instanceof EntityPlane)) targetY = targetPitch;
+			if(!FlansModClient.controlModeMouse && driver && !(driveable instanceof EntityPlane) && !(driveable instanceof EntityMecha)) targetY = targetPitch;
 
 			float pitchToMove = (targetY - looking.getPitch());
 			for(; pitchToMove > 180F; pitchToMove -= 360F) {}

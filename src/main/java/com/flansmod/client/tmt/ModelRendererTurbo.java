@@ -2071,6 +2071,7 @@ public class ModelRendererTurbo extends ModelRenderer
 		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
 		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
 		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+		
 		if(field_1402_i)
 		{
 			return;

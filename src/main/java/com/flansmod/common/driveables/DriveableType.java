@@ -457,6 +457,7 @@ public class DriveableType extends InfoType
 					materialsHarvested.add(Material.leaves);	
 					materialsHarvested.add(Material.cactus);
 					materialsHarvested.add(Material.wood);
+					materialsHarvested.add(Material.plants);
 				}
 			}
 
